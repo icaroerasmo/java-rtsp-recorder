@@ -1,0 +1,28 @@
+telegram:
+  chat_id: "-1000000000000"
+  bot_token: "0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3"
+
+storage:
+  video-duration: 5m
+  file-mover-sleep: 1m
+  tmp-folder: "/tmp"
+  records-folder: "/records"
+  max-records-size: 10G
+
+rtsp:
+    cameras:
+        - name: back-door
+          url: ""
+          host: ""
+          port: 0
+          protocol: ""
+          username: ""
+          password: ""
+        - name: hallway
+          url: ""
+          host: ""
+          port: 0
+          protocol: ""
+          username: ""
+          password: ""
+

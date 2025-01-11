@@ -1,0 +1,8 @@
+environment-variables:
+  application:
+    version: @project.version@
+
+logging:
+  level:
+    org:
+      springframework: OFF
