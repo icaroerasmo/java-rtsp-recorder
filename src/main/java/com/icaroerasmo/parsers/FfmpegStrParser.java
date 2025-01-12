@@ -76,7 +76,7 @@ public class FfmpegStrParser {
 
             StringBuilder strBuilder = new StringBuilder();
 
-            strBuilder.append("-nostdin -rtsp_transport udp ");
+            strBuilder.append("-nostdin -threads 2 -rtsp_transport udp ");
 
             if(ffmpegStrParser.getTimeout() != null) {
                 strBuilder.append("-timeout %s ".formatted(durationParser(ffmpegStrParser.getTimeout(), TimeUnit.MILLISECONDS)));
