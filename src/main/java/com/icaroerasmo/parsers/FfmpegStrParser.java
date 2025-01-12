@@ -76,7 +76,7 @@ public class FfmpegStrParser {
 
             StringBuilder strBuilder = new StringBuilder();
 
-            strBuilder.append("-nostdin -threads 2 -rtsp_transport udp ");
+            strBuilder.append("-rtsp_transport udp ");
 
             if(ffmpegStrParser.getTimeout() != null) {
                 strBuilder.append("-timeout %s ".formatted(durationParser(ffmpegStrParser.getTimeout(), TimeUnit.MILLISECONDS)));
@@ -100,8 +100,6 @@ public class FfmpegStrParser {
             }
 
             strBuilder.append("%s/%s%%Y-%%m-%%d_%%H-%%M-%%S.mkv ".formatted(ffmpegStrParser.getTmpPath(), ffmpegStrParser.getCameraName()));
-
-            strBuilder.append("2> /dev/null ");
 
             return strBuilder.toString();
         }

@@ -7,6 +7,7 @@ import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class FfmpegService {
@@ -27,7 +30,7 @@ public class FfmpegService {
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
 
-        ExecutorService executorService = Executors.newFixedThreadPool(rtspProperties.getCameras().size());
+        ExecutorService executorService = Executors.newFixedThreadPool(rtspProperties.getCameras().size()*3);
 
         List<Future<Void>> futures = rtspProperties.getCameras().stream().
                 map(camera ->
@@ -39,7 +42,7 @@ public class FfmpegService {
                             tmpPath(storageProperties.getTmpFolder()).
                             videoDuration(storageProperties.getVideoDuration()).build()
                 ).
-                map(command -> executorService.submit(() -> new FfmpegRunner(command).get())).
+                map(command -> executorService.submit(() -> new FfmpegRunner(command, log::info, log::error).get())).
                 toList();
 
     }
