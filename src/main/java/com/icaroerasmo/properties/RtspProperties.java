@@ -10,8 +10,7 @@ import java.util.List;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "rtsp")
-@PropertySource("classpath:/config.yaml")
-public class RtspProperties {
+public class RtspProperties implements ConfigYaml {
 
     private String timeout;
     private List<Camera> cameras;

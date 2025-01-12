@@ -127,7 +127,7 @@ public class FfmpegStrParser {
                 }
             }
 
-            return String.valueOf(TimeUnit.MILLISECONDS.convert(milliseconds, timeUnit));
+            return String.valueOf(timeUnit.convert(milliseconds, TimeUnit.MILLISECONDS));
         }
     }
 }

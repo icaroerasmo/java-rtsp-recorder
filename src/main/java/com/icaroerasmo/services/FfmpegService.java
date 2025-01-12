@@ -20,21 +20,16 @@ import java.util.concurrent.Future;
 public class FfmpegService {
 
     private final JavaRtspProperties javaRtspProperties;
-    private final StorageProperties storageProperties;
-    private final RtspProperties rtspProperties;
-
-    @Autowired
-    private StorageProperties storageProperties2;
-
-    @Autowired
-    private RtspProperties rtspProperties2;
 
     @PostConstruct
     public void init() {
 
+        final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
+        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
+
         ExecutorService executorService = Executors.newFixedThreadPool(rtspProperties.getCameras().size());
 
-        /*List<Future<Void>>*/ List<String> futures = rtspProperties.getCameras().stream().
+        List<Future<Void>> futures = rtspProperties.getCameras().stream().
                 map(camera ->
                     FfmpegStrParser.builder().
                             cameraName(camera.getName()).
@@ -44,7 +39,7 @@ public class FfmpegService {
                             tmpPath(storageProperties.getTmpFolder()).
                             videoDuration(storageProperties.getVideoDuration()).build()
                 ).
-//                map(command -> /*executorService.submit(() -> new FfmpegRunner(command).get())*/).
+                map(command -> executorService.submit(() -> new FfmpegRunner(command).get())).
                 toList();
 
     }
