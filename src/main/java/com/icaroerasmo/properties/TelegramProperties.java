@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "telegram")
-public class TelegramProperties implements ConfigYaml {
+public class TelegramProperties {
     // -1000000000000
     private String chatId;
     // 7556187858:AAFAe98-yuof8daJYptVZVVV4MzV-w7WgMV5

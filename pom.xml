@@ -8,7 +8,7 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.icaroerasmo</groupId>
-  <artifactId>java-rtsp-recorder</artifactId>
+  <artifactId>java-rtspProperties-recorder</artifactId>
   <version>0.1</version>
   <name>Java RTSP Recorder</name>
   <properties>

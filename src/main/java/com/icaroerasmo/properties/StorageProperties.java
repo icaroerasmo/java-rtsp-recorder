@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "storage")
-public class StorageProperties implements ConfigYaml {
+public class StorageProperties {
     private String videoDuration;
     private String fileMoverSleep;
     private String tmpFolder;
