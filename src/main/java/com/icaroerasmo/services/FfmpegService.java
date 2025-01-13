@@ -5,6 +5,7 @@ import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
+import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.PropertiesUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -29,6 +30,7 @@ public class FfmpegService {
     private final ExecutorService executorService;
     private final FfmpegRunner ffmpegRunner;
     private final PropertiesUtil propertiesUtil;
+    private final FutureStorage futureStorage;
 
     @PostConstruct
     public void init() {
@@ -50,7 +52,11 @@ public class FfmpegService {
                                 videoDuration(storageProperties.getVideoDuration()).build()
                     )
                 ).
-                map(entry -> executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()))).
+                map(entry -> {
+                    Future<Void> future = executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()));
+                    futureStorage.put(entry.getKey(), "main", future);
+                    return future;
+                }).
                 toList();
 
         log.info("All cameras started.");

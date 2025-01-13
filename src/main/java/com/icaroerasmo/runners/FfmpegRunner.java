@@ -1,6 +1,7 @@
 package com.icaroerasmo.runners;
 
 import com.icaroerasmo.properties.JavaRtspProperties;
+import com.icaroerasmo.storage.FutureStorage;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -10,10 +11,7 @@ import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
@@ -21,11 +19,13 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 @Log4j2
+@Getter
 @Component
 @RequiredArgsConstructor
 public class FfmpegRunner {
 
     private final ExecutorService executorService;
+    private final FutureStorage futureStorage;
 
     @SneakyThrows
     public Void run(String camName, String command) {
@@ -68,6 +68,9 @@ public class FfmpegRunner {
                         }
                         return null;
                     });
+
+                    futureStorage.put(camName, "outputLogsFuture", outputLogsFuture);
+                    futureStorage.put(camName, "errorLogsFuture", errorLogsFuture);
 
                     Thread.sleep(1000); // Wait for threads to finish reading output before checking
 
