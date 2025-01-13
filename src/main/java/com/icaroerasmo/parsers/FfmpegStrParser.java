@@ -96,12 +96,14 @@ public class FfmpegStrParser {
                 strBuilder.append("-segment_list %s ".formatted(doneSegmentsList));
                 strBuilder.append("-segment_list_size %s ".formatted(ffmpegStrParser.getDoneSegmentsListSize()));
                 strBuilder.append("-strftime 1 ");
-                strBuilder.append("-segment_time %s ".formatted(durationParser(ffmpegStrParser.getVideoDuration(), TimeUnit.SECONDS)));
+                strBuilder.append("-segment_time %s ".formatted(
+                        durationParser(ffmpegStrParser.getVideoDuration(), TimeUnit.SECONDS)));
                 strBuilder.append("-reset_timestamps 1 ");
 
             }
 
-            strBuilder.append("%s/%s%%Y-%%m-%%d_%%H-%%M-%%S.mkv".formatted(ffmpegStrParser.getTmpPath(), ffmpegStrParser.getCameraName()));
+            strBuilder.append("%s/%s%%Y-%%m-%%d_%%H-%%M-%%S.mkv".
+                    formatted(ffmpegStrParser.getTmpPath(), ffmpegStrParser.getCameraName()));
 
             return strBuilder.toString();
         }
