@@ -5,6 +5,7 @@ import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
+import com.icaroerasmo.util.PropertiesUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -23,36 +25,33 @@ import java.util.function.Consumer;
 public class FfmpegService {
 
     private final JavaRtspProperties javaRtspProperties;
+    private final ExecutorService executorService;
+    private final FfmpegRunner ffmpegRunner;
+    private final PropertiesUtil propertiesUtil;
 
     @PostConstruct
     public void init() {
 
+        log.info("Starting ffmpeg service");
+
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
 
-        ExecutorService executorService = Executors.newFixedThreadPool(rtspProperties.getCameras().size()*3);
-
-        List<Future<Void>> futures = rtspProperties.getCameras().stream().
+        List<Future<Void>> mainFutures = rtspProperties.getCameras().stream().
                 map(camera ->
-                    FfmpegStrParser.builder().
-                            cameraName(camera.getName()).
-                            timeout(rtspProperties.getTimeout()).
-                            url(cameraUrlParser(camera)).
-                            doneSegmentsListSize(5).
-                            tmpPath(storageProperties.getTmpFolder()).
-                            videoDuration(storageProperties.getVideoDuration()).build()
+                    Map.entry(camera.getName(),
+                        FfmpegStrParser.builder().
+                                cameraName(camera.getName()).
+                                timeout(rtspProperties.getTimeout()).
+                                url(propertiesUtil.cameraUrlParser(camera)).
+                                doneSegmentsListSize(5).
+                                tmpPath(storageProperties.getTmpFolder()).
+                                videoDuration(storageProperties.getVideoDuration()).build()
+                    )
                 ).
-                map(command -> executorService.submit(() -> new FfmpegRunner(command, log::info, log::error).get())).
+                map(entry -> executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()))).
                 toList();
 
-    }
-
-    private String cameraUrlParser(RtspProperties.Camera camera) {
-
-        if(camera.getUrl() != null && !camera.getUrl().isBlank()) {
-            return camera.getUrl();
-        }
-
-        return "rtsp://" + camera.getUsername()  + ":" + camera.getPassword() + "@" + camera.getHost() + ":" + camera.getPort() + "/"+camera.getFormat();
+        log.info("All cameras started.");
     }
 }

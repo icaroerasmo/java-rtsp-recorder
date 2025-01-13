@@ -1,6 +1,11 @@
 package com.icaroerasmo.runners;
 
+import com.icaroerasmo.properties.JavaRtspProperties;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,92 +13,93 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-@Getter
-public class FfmpegRunner implements Supplier<Void> {
+@Log4j2
+@Component
+@RequiredArgsConstructor
+public class FfmpegRunner {
 
-    private String command = "ffmpeg ";
-    private Consumer<String> outputLogsConsumer;
-    private Consumer<String> errorLogsConsumer;
+    private final ExecutorService executorService;
 
-    private FfmpegRunner(){};
+    @SneakyThrows
+    public Void run(String camName, String command) {
 
-    public FfmpegRunner(String command, Consumer<String> outputLogsConsumer, Consumer<String> errorLogsConsumer) {
-        this.command += command;
-        this.outputLogsConsumer = outputLogsConsumer;
-        this.errorLogsConsumer = errorLogsConsumer;
-    }
+        log.info("Cam {}: Running command: {}", camName, command);
 
-    @Override
-    public Void get() {
-        runCommand();
-        return null;
-    }
-
-    public void runCommand() {
         final int maxRetries = 3;
         int attempt = 0;
         boolean success = false;
 
-        while (attempt < maxRetries && !success) {
-            Process process = null;
-            try {
-                process = new ProcessBuilder(command.split(" ")).start();
+        for(;;) {
+            while (attempt < maxRetries && !success) {
+                Process process = null;
+                Future<Void> outputLogsFuture = null;
+                Future<Void> errorLogsFuture = null;
+                try {
+                    process = new ProcessBuilder(command.split(" ")).start();
 
-                Process finalProcess = process;
+                    Process finalProcess = process;
 
-                Thread outputThread = new Thread(() -> {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            outputLogsConsumer.accept(line);
+                    outputLogsFuture = executorService.submit(() -> {
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                log.debug("Cam {}: {}", camName, line);
+                            }
+                        } catch (IOException e) {
+                            throw new RuntimeException("Cam " + camName + ": Error reading ffmpeg output", e);
                         }
-                    } catch (IOException e) {
-                        throw new RuntimeException("Error reading ffmpeg output", e);
-                    }
-                });
+                        return null;
+                    });
 
-                Thread errorThread = new Thread(() -> {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            errorLogsConsumer.accept(line);
+                    errorLogsFuture = executorService.submit(() -> {
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                log.debug("Cam {}: {}", camName, line);
+                            }
+                        } catch (IOException e) {
+                            throw new RuntimeException("Cam " + camName + ": Error reading ffmpeg error output", e);
                         }
-                    } catch (IOException e) {
-                        throw new RuntimeException("Error reading ffmpeg error output", e);
+                        return null;
+                    });
+
+                    Thread.sleep(1000); // Wait for threads to finish reading output before checking
+
+                    if (process.isAlive()) {
+                        attempt = 0;
                     }
-                });
 
-                outputThread.start();
-                errorThread.start();
+                    int exitCode = process.waitFor();
 
-                int exitCode = process.waitFor();
-                outputThread.join();
-                errorThread.join();
-
-                if (exitCode == 0) {
-                    success = true;
-                } else {
-                    throw new RuntimeException("ffmpeg execution failed with exit code " + exitCode);
+                    if (exitCode == 0) {
+                        success = true;
+                    } else {
+                        throw new RuntimeException("Cam " + camName + ": ffmpeg execution failed with exit code " + exitCode);
+                    }
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
+                    log.warn("Cam {}: Attempt {} failed: {}", camName, attempt + 1, e.getMessage());
+                } finally {
+                    if (process != null) {
+                        process.destroy();
+                    }
                 }
-            } catch (IOException | InterruptedException e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-                errorLogsConsumer.accept("Attempt " + (attempt + 1) + " failed: " + e.getMessage());
-            } finally {
-                if (process != null) {
-                    process.destroy();
-                }
+                attempt++;
             }
-            attempt++;
-        }
 
-        if (!success) {
-            throw new RuntimeException("ffmpeg execution failed after " + maxRetries + " attempts");
+            if (!success) {
+                log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in 5 minutes...", camName);
+                Thread.sleep(300000);
+            }
         }
     }
 }

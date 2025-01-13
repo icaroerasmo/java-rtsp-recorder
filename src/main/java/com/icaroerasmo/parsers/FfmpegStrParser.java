@@ -76,17 +76,19 @@ public class FfmpegStrParser {
 
             StringBuilder strBuilder = new StringBuilder();
 
-            strBuilder.append("-rtsp_transport udp ");
+            strBuilder.append("ffmpeg -rtsp_transport udp ");
+
+            strBuilder.append("-i %s -c copy ".formatted(ffmpegStrParser.getUrl()));
 
             if(ffmpegStrParser.getTimeout() != null) {
-                strBuilder.append("-timeout %s ".formatted(durationParser(ffmpegStrParser.getTimeout(), TimeUnit.MILLISECONDS)));
+                strBuilder.append("-rw_timeout %s ".formatted(durationParser(ffmpegStrParser.getTimeout(), TimeUnit.MILLISECONDS)));
             }
-
-            strBuilder.append("-i %s -c copy -f segment ".formatted(ffmpegStrParser.getUrl()));
 
             if(ffmpegStrParser.getCameraName() != null &&
                     ffmpegStrParser.getDoneSegmentsListSize() != null &&
                     ffmpegStrParser.getVideoDuration() != null) {
+
+                strBuilder.append("-f segment ");
 
                 final String doneSegmentsList = ffmpegStrParser.getTmpPath() +
                         "/.%s_done_segments".formatted(ffmpegStrParser.getCameraName());
@@ -99,7 +101,7 @@ public class FfmpegStrParser {
 
             }
 
-            strBuilder.append("%s/%s%%Y-%%m-%%d_%%H-%%M-%%S.mkv ".formatted(ffmpegStrParser.getTmpPath(), ffmpegStrParser.getCameraName()));
+            strBuilder.append("%s/%s%%Y-%%m-%%d_%%H-%%M-%%S.mkv".formatted(ffmpegStrParser.getTmpPath(), ffmpegStrParser.getCameraName()));
 
             return strBuilder.toString();
         }
