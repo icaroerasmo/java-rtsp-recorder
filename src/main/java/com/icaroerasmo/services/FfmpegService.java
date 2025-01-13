@@ -7,6 +7,7 @@ import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
 import com.icaroerasmo.util.PropertiesUtil;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,5 +54,11 @@ public class FfmpegService {
                 toList();
 
         log.info("All cameras started.");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        log.info("Stopping ffmpeg service");
+        executorService.shutdownNow();
     }
 }

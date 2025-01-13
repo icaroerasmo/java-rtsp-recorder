@@ -36,7 +36,6 @@ public class FfmpegRunner {
         int attempt = 0;
         boolean success = false;
 
-        for(;;) {
             while (attempt < maxRetries && !success) {
                 Process process = null;
                 Future<Void> outputLogsFuture = null;
@@ -83,23 +82,26 @@ public class FfmpegRunner {
                     } else {
                         throw new RuntimeException("Cam " + camName + ": ffmpeg execution failed with exit code " + exitCode);
                     }
+                } catch (InterruptedException e) {
+                    log.warn("Cam {}: Interrupted.", camName);
+                    Thread.currentThread().interrupt();
+                    break;
                 } catch (Exception e) {
-                    if (e instanceof InterruptedException) {
-                        Thread.currentThread().interrupt();
-                    }
-                    log.warn("Cam {}: Attempt {} failed: {}", camName, attempt + 1, e.getMessage());
+                    log.warn("Cam {}: Attempt {} failed.", camName, attempt + 1, e);
                 } finally {
                     if (process != null) {
                         process.destroy();
                     }
                 }
-                attempt++;
-            }
 
-            if (!success) {
-                log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in 5 minutes...", camName);
-                Thread.sleep(300000);
+                attempt++;
+
+                if (!success && attempt >= maxRetries) {
+                    attempt = 0;
+                    log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in 5 minutes...", camName);
+                    Thread.sleep(300000);
+                }
             }
-        }
+        return null;
     }
 }
