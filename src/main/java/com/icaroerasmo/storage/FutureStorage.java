@@ -17,6 +17,10 @@ public class FutureStorage {
     }
 
     public Future<Void> get(String camName, String threadName) {
-        return logsThreads.get(camName).get(threadName);
+        return get(camName).get(threadName);
+    }
+
+    public Map<String, Future<Void>> get(String camName) {
+        return logsThreads.get(camName);
     }
 }
