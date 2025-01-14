@@ -6,14 +6,26 @@ import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.util.DateExtractor;
 import com.icaroerasmo.util.PropertiesUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -27,11 +39,20 @@ public class FfmpegService {
     private final FfmpegRunner ffmpegRunner;
     private final PropertiesUtil propertiesUtil;
     private final FutureStorage futureStorage;
+    private final DateExtractor dateExtractor;
 
+    @SneakyThrows
     @PostConstruct
     public void init() {
 
         log.info("Starting ffmpeg service");
+
+        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
+
+        moveFilesToRecordsFolder(Arrays.asList(
+                Objects.requireNonNull(Paths.get(
+                        storageProperties.getTmpFolder()).toFile().list(
+                                (dir, name) -> name.toLowerCase().endsWith(".mkv")))));
 
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
 
@@ -40,6 +61,56 @@ public class FfmpegService {
                 forEach(this::ffmpegFutureSubmitter);
 
         log.info("All cameras started.");
+    }
+
+    @Scheduled(fixedDelay = 60000)
+    private void filesMover() {
+        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
+        final List<RtspProperties.Camera> cameras = javaRtspProperties.getRtspProperties().getCameras();
+
+        cameras.forEach(cam -> {
+            final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
+            final Path segmentsFile = tmpFolder.resolve(".%s_done_segments".formatted(cam.getName()));
+            try {
+                moveFilesToRecordsFolder(Files.readAllLines(segmentsFile));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            // Clear done segments file
+            try {
+                new PrintWriter(segmentsFile.toFile()).close();
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void moveFilesToRecordsFolder(List<String> fileNames) throws IOException {
+
+        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
+        final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
+
+        fileNames.forEach(fileName -> {
+
+            Map<String, String> dateMap = dateExtractor.extractDate(fileName);
+
+            final Path destinationFolder =
+                    Paths.get(storageProperties.getRecordsFolder(), dateMap.get("year"),
+                            dateMap.get("month"), dateMap.get("day"), dateMap.get("hour"), dateMap.get("camName"));
+
+            if(!destinationFolder.toFile().exists()) {
+                destinationFolder.toFile().mkdirs();
+            }
+
+            final Path destinationPath = destinationFolder.resolve(fileName);
+
+            try {
+                Files.move(tmpFolder.resolve(fileName), destinationPath);
+            } catch (Exception e) {
+                log.error("Error moving file: {}", e.getMessage());
+            }
+        });
     }
 
     public void start(String camName) {
@@ -81,10 +152,11 @@ public class FfmpegService {
                 FfmpegStrParser.builder().
                         cameraName(camera.getName()).
                         timeout(rtspProperties.getTimeout()).
+                        transportProtocol(rtspProperties.getTransportProtocol()).
                         url(propertiesUtil.cameraUrlParser(camera)).
                         doneSegmentsListSize(5).
                         tmpPath(storageProperties.getTmpFolder()).
-                        videoDuration(storageProperties.getVideoDuration()).build()
+                        videoDuration(rtspProperties.getVideoDuration()).build()
         );
     }
 

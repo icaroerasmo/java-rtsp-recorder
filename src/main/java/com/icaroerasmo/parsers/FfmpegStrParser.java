@@ -1,5 +1,7 @@
 package com.icaroerasmo.parsers;
 
+import com.icaroerasmo.properties.RtspProperties;
+import com.icaroerasmo.util.PropertiesUtil;
 import lombok.Data;
 
 import java.time.Duration;
@@ -11,10 +13,12 @@ import java.util.regex.Pattern;
 
 @Data
 public class FfmpegStrParser {
+
     private String timeout;
     private String url;
     private Integer doneSegmentsListSize;
     private String videoDuration;
+    private String transportProtocol;
     private String tmpPath;
     private String cameraName;
 
@@ -23,6 +27,8 @@ public class FfmpegStrParser {
     }
 
     public static class FfmpegStrParserBuilder {
+
+        private final PropertiesUtil propertiesUtil = new PropertiesUtil();
 
         private final FfmpegStrParser ffmpegStrParser;
 
@@ -47,6 +53,15 @@ public class FfmpegStrParser {
 
         public FfmpegStrParserBuilder videoDuration(String videoDuration) {
             ffmpegStrParser.setVideoDuration(videoDuration);
+            return this;
+        }
+
+        public FfmpegStrParserBuilder transportProtocol(RtspProperties.TransportProtocol transportProtocol) {
+            return transportProtocol(transportProtocol.name().toLowerCase());
+        }
+
+        public FfmpegStrParserBuilder transportProtocol(String transportProtocol) {
+            ffmpegStrParser.setTransportProtocol(transportProtocol);
             return this;
         }
 
@@ -76,16 +91,17 @@ public class FfmpegStrParser {
 
             StringBuilder strBuilder = new StringBuilder();
 
-            strBuilder.append("ffmpeg -rtsp_transport udp ");
+            strBuilder.append("ffmpeg ");
+
+            strBuilder.append("-rtsp_transport %s ".formatted(ffmpegStrParser.getTransportProtocol()));
 
             strBuilder.append("-i %s -c copy ".formatted(ffmpegStrParser.getUrl()));
 
             if(ffmpegStrParser.getTimeout() != null) {
-                strBuilder.append("-rw_timeout %s ".formatted(durationParser(ffmpegStrParser.getTimeout(), TimeUnit.MILLISECONDS)));
+                strBuilder.append("-rw_timeout %s ".formatted(propertiesUtil.durationParser(ffmpegStrParser.getTimeout(), TimeUnit.MILLISECONDS)));
             }
 
-            if(ffmpegStrParser.getCameraName() != null &&
-                    ffmpegStrParser.getDoneSegmentsListSize() != null &&
+            if(ffmpegStrParser.getDoneSegmentsListSize() != null &&
                     ffmpegStrParser.getVideoDuration() != null) {
 
                 strBuilder.append("-f segment ");
@@ -97,7 +113,7 @@ public class FfmpegStrParser {
                 strBuilder.append("-segment_list_size %s ".formatted(ffmpegStrParser.getDoneSegmentsListSize()));
                 strBuilder.append("-strftime 1 ");
                 strBuilder.append("-segment_time %s ".formatted(
-                        durationParser(ffmpegStrParser.getVideoDuration(), TimeUnit.SECONDS)));
+                        propertiesUtil.durationParser(ffmpegStrParser.getVideoDuration(), TimeUnit.SECONDS)));
                 strBuilder.append("-reset_timestamps 1 ");
 
             }
@@ -106,30 +122,6 @@ public class FfmpegStrParser {
                     formatted(ffmpegStrParser.getTmpPath(), ffmpegStrParser.getCameraName()));
 
             return strBuilder.toString();
-        }
-
-        private String durationParser(String duration, TimeUnit timeUnit) {
-            Pattern pattern = Pattern.compile("(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?");
-            Matcher matcher = pattern.matcher(duration);
-            long milliseconds = 0;
-
-            if (matcher.matches()) {
-                String hours = matcher.group(1);
-                String minutes = matcher.group(2);
-                String seconds = matcher.group(3);
-
-                if (hours != null) {
-                    milliseconds += Long.parseLong(hours) * 3600000;
-                }
-                if (minutes != null) {
-                    milliseconds += Long.parseLong(minutes) * 60000;
-                }
-                if (seconds != null) {
-                    milliseconds += Long.parseLong(seconds) * 1000;
-                }
-            }
-
-            return String.valueOf(timeUnit.convert(milliseconds, TimeUnit.MILLISECONDS));
         }
     }
 }
