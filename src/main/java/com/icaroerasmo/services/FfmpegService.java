@@ -6,19 +6,15 @@ import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
 import com.icaroerasmo.storage.FutureStorage;
-import com.icaroerasmo.util.DateExtractor;
+import com.icaroerasmo.util.FfmpegUtil;
 import com.icaroerasmo.util.PropertiesUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,7 +35,7 @@ public class FfmpegService {
     private final FfmpegRunner ffmpegRunner;
     private final PropertiesUtil propertiesUtil;
     private final FutureStorage futureStorage;
-    private final DateExtractor dateExtractor;
+    private final FfmpegUtil ffmpegUtil;
 
     @SneakyThrows
     @PostConstruct
@@ -63,37 +59,14 @@ public class FfmpegService {
         log.info("All cameras started.");
     }
 
-    @Scheduled(fixedDelay = 60000)
-    private void filesMover() {
-        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
-        final List<RtspProperties.Camera> cameras = javaRtspProperties.getRtspProperties().getCameras();
-
-        cameras.forEach(cam -> {
-            final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
-            final Path segmentsFile = tmpFolder.resolve(".%s_done_segments".formatted(cam.getName()));
-            try {
-                moveFilesToRecordsFolder(Files.readAllLines(segmentsFile));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            // Clear done segments file
-            try {
-                new PrintWriter(segmentsFile.toFile()).close();
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
-    private void moveFilesToRecordsFolder(List<String> fileNames) throws IOException {
+    private void moveFilesToRecordsFolder(List<String> fileNames) {
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
 
         fileNames.forEach(fileName -> {
 
-            Map<String, String> dateMap = dateExtractor.extractDate(fileName);
+            Map<String, String> dateMap = ffmpegUtil.extractInfoFromFileName(fileName);
 
             final Path destinationFolder =
                     Paths.get(storageProperties.getRecordsFolder(), dateMap.get("year"),
@@ -108,7 +81,8 @@ public class FfmpegService {
             try {
                 Files.move(tmpFolder.resolve(fileName), destinationPath);
             } catch (Exception e) {
-                log.error("Error moving file: {}", e.getMessage());
+                log.error("Error moving file: {}", e.getMessage(), e);
+
             }
         });
     }
