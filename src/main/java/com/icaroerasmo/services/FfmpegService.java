@@ -128,7 +128,7 @@ public class FfmpegService {
                         timeout(rtspProperties.getTimeout()).
                         transportProtocol(rtspProperties.getTransportProtocol()).
                         url(propertiesUtil.cameraUrlParser(camera)).
-                        doneSegmentsListSize(5).
+                        doneSegmentsListSize(20).
                         tmpPath(storageProperties.getTmpFolder()).
                         videoDuration(rtspProperties.getVideoDuration()).build()
         );

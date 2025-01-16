@@ -6,12 +6,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDate;
@@ -24,6 +28,7 @@ import java.util.Locale;
 public class FfmpegUtil {
 
     private final JavaRtspProperties javaRtspProperties;
+    private final ReentrantLock lock = new ReentrantLock();
 
     public Map<String, String> extractInfoFromFileName(String input) {
 
@@ -61,29 +66,58 @@ public class FfmpegUtil {
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
+        final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
+        final Path indexFile = recordsFolder.resolve(".index");
 
-        fileNames.forEach(fileName -> {
-
+        fileNames.parallelStream().map(fileName -> {
             Map<String, String> dateMap = extractInfoFromFileName(fileName);
-
+            final Path originPath = tmpFolder.resolve(fileName);
             final Path destinationFolder =
-                    Paths.get(storageProperties.getRecordsFolder(), dateMap.get("year"),
+                    Paths.get(recordsFolder.toString(), dateMap.get("year"),
                             dateMap.get("month"), dateMap.get("day"), dateMap.get("hour"), dateMap.get("camName"));
-
-            if(!destinationFolder.toFile().exists()) {
-                destinationFolder.toFile().mkdirs();
-            }
-
             final Path destinationPath = destinationFolder.resolve(fileName);
 
-            try {
-                log.info("Moving file: {} to {}", fileName, destinationFolder);
-                Files.move(tmpFolder.resolve(fileName), destinationPath);
-            } catch (Exception e) {
-                log.error("Error moving file: {}", e.getMessage());
+            if(!Files.exists(destinationFolder)) {
+                try {
+                    Files.createDirectories(destinationFolder);
+                } catch (Exception e) {
+                    log.error("Error creating folder: {}", e.getMessage());
+                    log.debug("Error creating folder: {}", e.getMessage(), e);
+                    throw new RuntimeException(e);
+                }
             }
-            log.info("File {} moved successfully.", fileName);
-        });
+            return Map.entry(originPath, destinationPath);
+        }).
+        filter(entry -> Files.exists(entry.getKey())).
+        forEach(
+            entry -> {
+
+                final Path originPath = entry.getKey();
+                final Path destinationPath = entry.getValue();
+
+                try {
+                    log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
+                    Files.move(originPath, destinationPath);
+
+                    BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
+                    String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
+
+                    lock.lock();
+
+                    log.info("Writing to index file: {}", csvLine);
+                    Files.write(indexFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+                } catch (Exception e) {
+                    log.error("Error moving file: {}", e.getMessage(), e);
+                    log.debug("Error moving file: {}", e.getMessage());
+                    return;
+                } finally {
+                    lock.unlock();
+                }
+
+                log.info("File {} moved successfully.", entry.getKey());
+            }
+        );
 
         log.info("Done moving files to records folder");
     }

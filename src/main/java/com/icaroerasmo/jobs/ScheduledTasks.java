@@ -52,13 +52,6 @@ public class ScheduledTasks {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
-            // Clear done segments file
-            try {
-                new PrintWriter(segmentsFile.toFile()).close();
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            }
         });
 
         log.info("Finished job to move files to records folder");
