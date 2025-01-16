@@ -12,15 +12,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
-import java.util.Locale;
 
 @Log4j2
 @Component
@@ -28,7 +25,8 @@ import java.util.Locale;
 public class FfmpegUtil {
 
     private final JavaRtspProperties javaRtspProperties;
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock indexFileLock = new ReentrantLock();
+    private final PropertiesUtil propertiesUtil;
 
     public Map<String, String> extractInfoFromFileName(String input) {
 
@@ -58,6 +56,53 @@ public class FfmpegUtil {
         }
 
         return dateMap;
+    }
+
+    private void deleteFilesToSaveSpace(Long saveUpTo) {
+        log.info("Deleting files");
+
+        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
+        final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
+        final Path indexFile = recordsFolder.resolve(".index");
+
+        try {
+            long sum = 0l;
+
+            List<String> fileList = Files.readAllLines(indexFile);
+
+            List<Path> filesToDelete = new ArrayList<>();
+
+            int index = 0;
+
+            while(sum < saveUpTo) {
+
+                if(fileList.isEmpty()) {
+                    break;
+                }
+
+                final String fileRecord = fileList.get(index++);
+
+                String[] file = fileRecord.split(",");
+                Path filePath = Paths.get(file[0]);
+                sum += Long.parseLong(file[1]);
+
+                filesToDelete.add(filePath);
+            }
+
+            filesToDelete.stream().parallel().forEach(file -> {
+                try {
+                    Files.deleteIfExists(file);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            Files.write(indexFile, fileList.subList(index, fileList.size()));
+
+        } catch (Exception e) {
+            log.error("Error deleting files: {}", e.getMessage());
+            log.debug("Error deleting files: {}", e.getMessage(), e);
+        }
     }
 
     public void moveFilesToRecordsFolder(List<String> fileNames) {
@@ -96,14 +141,28 @@ public class FfmpegUtil {
                 final Path destinationPath = entry.getValue();
 
                 try {
+
+                    indexFileLock.lock();
+
                     log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
+
+                    BasicFileAttributes attrs = Files.readAttributes(originPath, BasicFileAttributes.class);
+
+                    BasicFileAttributes folderAttrs = Files.readAttributes(recordsFolder, BasicFileAttributes.class);
+
+                    long maxFolderSizeInBytes =
+                            propertiesUtil.storageUnitConverter(
+                                    storageProperties.getMaxRecordsFolderSize(), "B");
+
+                    if(folderAttrs.size() + attrs.size() > maxFolderSizeInBytes) {
+                        deleteFilesToSaveSpace(attrs.size());
+                    }
+
+                    deleteFilesToSaveSpace(attrs.size());
+
                     Files.move(originPath, destinationPath);
 
-                    BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
                     String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
-
-                    lock.lock();
-
                     log.info("Writing to index file: {}", csvLine);
                     Files.write(indexFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
@@ -112,7 +171,7 @@ public class FfmpegUtil {
                     log.debug("Error moving file: {}", e.getMessage());
                     return;
                 } finally {
-                    lock.unlock();
+                    indexFileLock.unlock();
                 }
 
                 log.info("File {} moved successfully.", entry.getKey());
