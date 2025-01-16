@@ -45,7 +45,7 @@ public class FfmpegService {
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
 
-        moveFilesToRecordsFolder(Arrays.asList(
+        ffmpegUtil.moveFilesToRecordsFolder(Arrays.asList(
                 Objects.requireNonNull(Paths.get(
                         storageProperties.getTmpFolder()).toFile().list(
                                 (dir, name) -> name.toLowerCase().endsWith(".mkv")))));
@@ -57,34 +57,6 @@ public class FfmpegService {
                 forEach(this::ffmpegFutureSubmitter);
 
         log.info("All cameras started.");
-    }
-
-    private void moveFilesToRecordsFolder(List<String> fileNames) {
-
-        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
-        final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
-
-        fileNames.forEach(fileName -> {
-
-            Map<String, String> dateMap = ffmpegUtil.extractInfoFromFileName(fileName);
-
-            final Path destinationFolder =
-                    Paths.get(storageProperties.getRecordsFolder(), dateMap.get("year"),
-                            dateMap.get("month"), dateMap.get("day"), dateMap.get("hour"), dateMap.get("camName"));
-
-            if(!destinationFolder.toFile().exists()) {
-                destinationFolder.toFile().mkdirs();
-            }
-
-            final Path destinationPath = destinationFolder.resolve(fileName);
-
-            try {
-                Files.move(tmpFolder.resolve(fileName), destinationPath);
-            } catch (Exception e) {
-                log.error("Error moving file: {}", e.getMessage(), e);
-
-            }
-        });
     }
 
     public void start(String camName) {

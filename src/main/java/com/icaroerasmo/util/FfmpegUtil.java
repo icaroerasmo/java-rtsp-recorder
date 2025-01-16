@@ -154,11 +154,11 @@ public class FfmpegUtil {
                             propertiesUtil.storageUnitConverter(
                                     storageProperties.getMaxRecordsFolderSize(), "B");
 
-                    if(folderAttrs.size() + attrs.size() > maxFolderSizeInBytes) {
-                        deleteFilesToSaveSpace(attrs.size());
-                    }
+                    long probableSize = folderAttrs.size() + attrs.size();
 
-                    deleteFilesToSaveSpace(attrs.size());
+                    if(probableSize > maxFolderSizeInBytes) {
+                        deleteFilesToSaveSpace(probableSize-maxFolderSizeInBytes);
+                    }
 
                     Files.move(originPath, destinationPath);
 
