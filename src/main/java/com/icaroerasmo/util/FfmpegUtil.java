@@ -144,20 +144,21 @@ public class FfmpegUtil {
 
                     log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
 
-                    BasicFileAttributes attrs = Files.readAttributes(originPath, BasicFileAttributes.class);
-
                     long maxFolderSizeInBytes =
                             propertiesUtil.storageUnitConverter(
                                     storageProperties.getMaxRecordsFolderSize(), "B");
 
                     long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
-                    long probableSize = sizeOfFolder + attrs.size();
+                    long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
+                    long probableSize = sizeOfFolder + sizeOfFile;
 
                     if(probableSize > maxFolderSizeInBytes) {
                         deleteFilesToSaveSpace(probableSize-maxFolderSizeInBytes);
                     }
 
                     Files.move(originPath, destinationPath);
+
+                    BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
 
                     String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
                     log.info("Writing to index file: {}", csvLine);
