@@ -3,6 +3,10 @@ package com.icaroerasmo.util;
 import com.icaroerasmo.properties.RtspProperties;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -95,5 +99,26 @@ public class PropertiesUtil {
             default:
                 throw new IllegalArgumentException("Invalid target unit: " + targetUnit);
         }
+    }
+
+    public long sizeOfFile(Path path) {
+        return sizeOfFile(path.toFile());
+    }
+
+    public long sizeOfFile(File file) {
+
+        if(file.isFile()) {
+            return file.length();
+        }
+
+        long sizeOfFiles = 0;
+
+        for(File newFile : Objects.requireNonNull(file.listFiles())) {
+            sizeOfFiles += sizeOfFile(newFile);
+        }
+
+        sizeOfFiles += file.length();
+
+        return sizeOfFiles;
     }
 }

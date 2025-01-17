@@ -74,7 +74,7 @@ public class FfmpegUtil {
 
             int index = 0;
 
-            while(sum < saveUpTo) {
+            while(sum <= saveUpTo && index < fileList.size()) {
 
                 if(fileList.isEmpty()) {
                     break;
@@ -142,19 +142,16 @@ public class FfmpegUtil {
 
                 try {
 
-                    indexFileLock.lock();
-
                     log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
 
                     BasicFileAttributes attrs = Files.readAttributes(originPath, BasicFileAttributes.class);
-
-                    BasicFileAttributes folderAttrs = Files.readAttributes(recordsFolder, BasicFileAttributes.class);
 
                     long maxFolderSizeInBytes =
                             propertiesUtil.storageUnitConverter(
                                     storageProperties.getMaxRecordsFolderSize(), "B");
 
-                    long probableSize = folderAttrs.size() + attrs.size();
+                    long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
+                    long probableSize = sizeOfFolder + attrs.size();
 
                     if(probableSize > maxFolderSizeInBytes) {
                         deleteFilesToSaveSpace(probableSize-maxFolderSizeInBytes);
@@ -164,6 +161,9 @@ public class FfmpegUtil {
 
                     String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
                     log.info("Writing to index file: {}", csvLine);
+
+                    indexFileLock.lock();
+
                     Files.write(indexFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
                 } catch (Exception e) {
