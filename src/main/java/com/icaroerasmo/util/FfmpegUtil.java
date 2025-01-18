@@ -34,7 +34,7 @@ public class FfmpegUtil {
 
         Map<String, String> dateMap = new HashMap<>();
 
-        String regex = ".*?(.+)(\\d{4})-(\\d{2})-(\\d{2})_(\\d{2})-\\d{2}-\\d{2}\\.mkv";
+        String regex = "(.+)(\\d{4})-(\\d{2})-(\\d{2})_(\\d{2})-\\d{2}-\\d{2}\\.mkv";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);
 
