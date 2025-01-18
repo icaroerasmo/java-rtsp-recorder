@@ -189,7 +189,7 @@ public class FfmpegUtil {
                     BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
 
                     String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
-                    log.info("Writing to index file: {}", csvLine);
+                    log.info("Writing to index file: {}", csvLine.substring(0, csvLine.length()-1));
 
                     indexFileLock.lock();
 
