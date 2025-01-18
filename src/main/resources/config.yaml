@@ -2,6 +2,9 @@ telegram:
   chat_id: "-1000000000000"
   bot_token: "0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3"
 
+rclone:
+  parameters: "copy <source folder> <destination folder> --exclude=**/.index* --ignore-existing"
+
 storage:
   video-duration: 5m
   file-mover-sleep: 1m
