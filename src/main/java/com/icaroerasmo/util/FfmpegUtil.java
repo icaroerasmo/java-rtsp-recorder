@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
+import java.util.stream.Stream;
 
 @Log4j2
 @Component
@@ -102,6 +104,32 @@ public class FfmpegUtil {
         } catch (Exception e) {
             log.error("Error deleting files: {}", e.getMessage());
             log.debug("Error deleting files: {}", e.getMessage(), e);
+        }
+    }
+
+    public void deleteEmptyFolders(Path files) {
+        log.info("Deleting empty folders");
+        deleteEmptyFoldersRecursively(Stream.of(files));
+        log.info("Done deleting empty folders");
+    }
+
+    private void deleteEmptyFoldersRecursively(Stream<Path> folders) {
+
+        try {
+            folders.filter(Files::isDirectory).forEach(directory -> {
+                try {
+                    if(Files.list(directory).findAny().isEmpty()) {
+                        log.info("Deleting folder: {}", directory);
+                        Files.delete(directory);
+                    } else {
+                        deleteEmptyFoldersRecursively(Files.list(directory));
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error deleting folder: {}", e.getMessage());
         }
     }
 

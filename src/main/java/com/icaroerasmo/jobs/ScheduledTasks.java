@@ -54,6 +54,8 @@ public class ScheduledTasks {
             }
         });
 
+        ffmpegUtil.deleteEmptyFolders(Paths.get(storageProperties.getRecordsFolder()));
+
         log.info("Finished job to move files to records folder");
     }
 }

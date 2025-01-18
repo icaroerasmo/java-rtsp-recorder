@@ -45,10 +45,13 @@ public class FfmpegService {
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
 
-        ffmpegUtil.moveFilesToRecordsFolder(Arrays.asList(
-                Objects.requireNonNull(Paths.get(
-                        storageProperties.getTmpFolder()).toFile().list(
-                                (dir, name) -> name.toLowerCase().endsWith(".mkv")))));
+        final List<String> mkvFiles = Files.list(
+                Paths.get(storageProperties.getTmpFolder())).
+                filter(f -> f.toString().endsWith(".mkv")).
+                map(f -> f.getName(f.getNameCount()-1).toString()).
+                toList();
+
+        ffmpegUtil.moveFilesToRecordsFolder(mkvFiles);
 
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
 
