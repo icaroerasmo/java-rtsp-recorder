@@ -1,6 +1,6 @@
 package com.icaroerasmo.services;
 
-import com.icaroerasmo.parsers.FfmpegStrParser;
+import com.icaroerasmo.parsers.FfmpegCommandParser;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
@@ -16,12 +16,9 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -78,7 +75,7 @@ public class FfmpegService {
 
     public void stop(String camName) {
 
-        Map<String, Future<Void>> futureMap =  futureStorage.get(camName);
+        Map<String, Future<?>> futureMap =  futureStorage.get(camName);
 
         if(futureMap == null) {
             log.error("Camera {} not found", camName);
@@ -98,7 +95,7 @@ public class FfmpegService {
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         return Map.entry(camera.getName(),
-                FfmpegStrParser.builder().
+                FfmpegCommandParser.builder().
                         cameraName(camera.getName()).
                         timeout(rtspProperties.getTimeout()).
                         transportProtocol(rtspProperties.getTransportProtocol()).

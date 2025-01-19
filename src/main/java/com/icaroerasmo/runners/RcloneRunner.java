@@ -1,7 +1,9 @@
 package com.icaroerasmo.runners;
 
+import com.icaroerasmo.parsers.RcloneCommandParser;
 import com.icaroerasmo.properties.ConfigYaml;
 import com.icaroerasmo.properties.RcloneProperties;
+import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
 import com.pengrad.telegrambot.TelegramBot;
@@ -10,6 +12,7 @@ import com.pengrad.telegrambot.request.SendMessage;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -17,6 +20,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -30,60 +35,64 @@ public class RcloneRunner implements ConfigYaml {
     private final FutureStorage futureStorage;
     private final RcloneProperties rcloneProperties;
     private final TelegramProperties telegramProperties;
+    private final StorageProperties storageProperties;
     private final TelegramBot telegram;
 
     public Void run() {
         log.info("Running rclone");
 
-        final String command = "rclone " + rcloneProperties.getParameters();
+        final List<String> command = RcloneCommandParser.builder()
+                .transferMethod(rcloneProperties.getTransferMethod())
+                .sourceFolder(storageProperties.getRecordsFolder())
+                .destinationFolder(rcloneProperties.getDestinationFolder())
+                .excludePatterns(rcloneProperties.getExcludePatterns())
+                .ignoreExisting(rcloneProperties.isIgnoreExisting())
+                .buildAsList();
 
         Process process = null;
-        Future<Void> outputLogsFuture = null;
-        Future<Void> errorLogsFuture = null;
+        Future<StringBuilder> outputLogsFuture = null;
+        Future<StringBuilder> errorLogsFuture = null;
+
+        sendSynchronizationStartedNotification();
+
         try {
-            process = new ProcessBuilder(command.split(" ")).start();
+
+            process = new ProcessBuilder(command).start();
 
             Process finalProcess = process;
 
             outputLogsFuture = executorService.submit(() -> {
-
-                sendSynchronizationStartedNotification();
 
                 final StringBuilder outputLogs = new StringBuilder();
 
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        log.debug("Rclone: {}", line);
+                        log.info("Rclone: {}", line);
                         outputLogs.append(line).append("\n");
                     }
                 } catch (IOException e) {
-                    throw new RuntimeException("Rclone: Error reading output.", e);
+                    log.debug("Stream closed for rclone output logs thread.");
                 }
 
-                sendSynchronizationEndedNotification(outputLogs);
-
-                return null;
+                return outputLogs;
             });
 
             errorLogsFuture = executorService.submit(() -> {
 
-                StringBuilder errorLogs = new StringBuilder();
+                final StringBuilder errorLogs = new StringBuilder();
 
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        log.debug("Rclone: {}", line);
+                        log.error("Rclone: {}", line);
+                        errorLogs.append(line).append("\n");
                     }
                 } catch (IOException e) {
-                    throw new RuntimeException("Rclone: Error reading error output", e);
+                    log.debug("Stream closed for rclone error logs thread.");
                 }
 
-                if(!errorLogs.isEmpty()) {
-                    sendSynchronizationErrorNotification(errorLogs);
-                }
-
-                return null;
+                return errorLogs;
             });
 
             futureStorage.put("rclone", "outputLogsFuture", outputLogsFuture);
@@ -91,9 +100,13 @@ public class RcloneRunner implements ConfigYaml {
 
             int exitCode = process.waitFor();
 
+            StringBuilder outputLogs = outputLogsFuture.get();
+
             if (exitCode != 0) {
                 throw new RuntimeException("Rclone: execution failed with exit code " + exitCode);
             }
+
+            sendSynchronizationEndedNotification(outputLogs);
 
         } catch (InterruptedException e) {
             log.warn("Rclone: Interrupted.");
@@ -105,11 +118,42 @@ public class RcloneRunner implements ConfigYaml {
             if (process != null) {
                 process.destroy();
             }
+
+            StringBuilder errorLogs = null;
+            try {
+                errorLogs = errorLogsFuture.get();
+            } catch (Exception e) {}
+
+            if(!errorLogs.isEmpty()) {
+                sendSynchronizationErrorNotification(errorLogs);
+            }
         }
 
         log.info("Rclone finished.");
 
         return null;
+    }
+
+    public String buildRcloneCommand() {
+        StringBuilder command = new StringBuilder("rclone -vv ");
+
+        // Add transfer method
+        command.append(rcloneProperties.getTransferMethod()).append(" ");
+
+        // Add source and destination folders
+        command.append("/home/icaroerasmo/rtsp-test/records ").append(rcloneProperties.getDestinationFolder()).append(" ");
+
+        // Add exclude patterns
+        for (String pattern : rcloneProperties.getExcludePatterns()) {
+            command.append("--exclude=").append(pattern).append(" ");
+        }
+
+        // Add ignore existing flag
+        if (rcloneProperties.isIgnoreExisting()) {
+            command.append("--ignore-existing ");
+        }
+
+        return command.toString().trim();
     }
 
     private void sendSynchronizationEndedNotification(StringBuilder outputLogs) {

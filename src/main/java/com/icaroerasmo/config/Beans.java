@@ -18,7 +18,7 @@ public class Beans {
 
     @Bean
     public ExecutorService executorService(RtspProperties rtspProperties) {
-        return Executors.newFixedThreadPool((rtspProperties.getCameras().size()*3)+1);
+        return Executors.newFixedThreadPool((rtspProperties.getCameras().size()*3)+3);
     }
 
     @Bean
