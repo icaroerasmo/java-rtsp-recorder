@@ -12,8 +12,8 @@ public class FutureStorage {
 
     private final Map<String, Map<String, Future<Void>>> logsThreads = new ConcurrentHashMap<>();
 
-    public void put(String camName, String threadName, Future<Void> future) {
-        logsThreads.computeIfAbsent(camName, k -> new ConcurrentHashMap<>()).put(threadName, future);
+    public void put(String futureName, String threadName, Future<Void> future) {
+        logsThreads.computeIfAbsent(futureName, k -> new ConcurrentHashMap<>()).put(threadName, future);
     }
 
     public Future<Void> get(String camName, String threadName) {
