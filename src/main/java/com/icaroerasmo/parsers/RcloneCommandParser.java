@@ -57,7 +57,7 @@ public class RcloneCommandParser {
         public List<String> buildAsList() {
             List<String> command = new ArrayList<>();
             command.add("rclone");
-            command.add("-vv");
+            command.add("-v");
 
             // Add transfer method
             command.add(rcloneCommandParser.getTransferMethod());
