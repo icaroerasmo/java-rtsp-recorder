@@ -24,7 +24,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -41,6 +40,7 @@ public class RcloneRunner implements ConfigYaml {
     private final TelegramProperties telegramProperties;
     private final StorageProperties storageProperties;
     private final TelegramBot telegram;
+    private final TranslateShellRunner translateShellRunner;
 
     @SneakyThrows
     public Void run() {
@@ -144,13 +144,17 @@ public class RcloneRunner implements ConfigYaml {
 
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
             request = new SendMessage(telegramProperties.getChatId(),
-                    "Synchronization ended in %s without any logs lines.".
-                            formatted(formattedDateForCaption(LocalDateTime.now())));
+                    translateShellRunner.translateText(
+                            messagesEnum.getMessage()+". "+
+                            MessagesEnum.RCLONE_NO_LOGS.getMessage().
+                            formatted(formattedDateForCaption(LocalDateTime.now()))));
         } else {
             request = new SendDocument(telegramProperties.getChatId(),
                     outputLogs.toString().getBytes(StandardCharsets.UTF_8)).
                     fileName("log%s.log".formatted(formattedDateForLogName(LocalDateTime.now()))).
-                    caption(messagesEnum.getMessage().formatted(formattedDateForCaption(LocalDateTime.now())));
+                    caption(
+                            translateShellRunner.translateText(messagesEnum.getMessage().formatted(
+                                    formattedDateForCaption(LocalDateTime.now()))));
         }
 
         telegram.execute(request);
@@ -158,8 +162,8 @@ public class RcloneRunner implements ConfigYaml {
 
     private void sendSynchronizationStartedNotification() {
         final SendMessage request = new SendMessage(telegramProperties.getChatId(),
-                "Synchronization started in %s successfully.".
-                        formatted(formattedDateForCaption(LocalDateTime.now())));
+                translateShellRunner.translateText("Synchronization started in %s successfully.".
+                        formatted(formattedDateForCaption(LocalDateTime.now()))));
         telegram.execute(request);
     }
 
