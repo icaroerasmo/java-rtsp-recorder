@@ -91,7 +91,7 @@ public class RcloneRunner implements ConfigYaml {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        log.error("Rclone: {}", line);
+                        log.info("Rclone: {}", line);
                         errorLogs.append(line).append("\n");
                     }
                 } catch (IOException e) {

@@ -1,9 +1,17 @@
+general:
+  locale: "pt-BR"
+
 telegram:
   chat_id: "-1000000000000"
   bot_token: "0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3"
 
 rclone:
-  parameters: "copy <source folder> <destination folder> --exclude=**/.index* --ignore-existing"
+  execution-interval: 10m
+  transfer-method: "copy"
+  destination-folder: "<Destination drive>:/<destinationFolder>"
+  exclude-patterns:
+    - "**/.index"
+  ignore-existing: true
 
 storage:
   video-duration: 5m
@@ -14,18 +22,13 @@ storage:
 
 rtsp:
     cameras:
-        - name: back-door
-          url: ""
-          host: ""
-          port: 0
-          protocol: ""
-          username: ""
-          password: ""
+        - name: back-door"
+          host: "<hostname>"
+          port: 554
+          protocol: "<udp or tcp accordingly with your camera requirements>"
+          username: "<username>"
+          password: "<password>"
         - name: hallway
-          url: ""
-          host: ""
-          port: 0
-          protocol: ""
-          username: ""
-          password: ""
+          url: "rtsp://<username>:<password>@<host>:<port>/<path>"
+          protocol: "<udp or tcp accordingly with your camera requirements>"
 
