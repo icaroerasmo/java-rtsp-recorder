@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -24,6 +25,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -168,12 +170,18 @@ public class RcloneRunner implements ConfigYaml {
     }
 
     private String formattedDateForCaption(LocalDateTime time) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy 'at' HH:mm:ss");
-        return time.format(formatter);
+        final String timeFormatPattern = " 'at' HH:mm:ss";
+        return dateTimeFormatter(timeFormatPattern, time);
     }
 
     private String formattedDateForLogName(LocalDateTime time) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy_HH-mm-ss");
-        return time.format(formatter);
+        final String timeFormatPattern = "_HH-mm-ss";
+        return dateTimeFormatter(timeFormatPattern, time).replace("/", "-");
+    }
+
+    private static String dateTimeFormatter(String timeFormatPattern, LocalDateTime time) {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormatPattern);
+        return time.format(dateFormatter) + time.format(timeFormatter);
     }
 }
