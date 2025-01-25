@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 @Data
 public class RcloneCommandParser {
 
+    private String configLocation;
     private String transferMethod;
     private String sourceFolder;
     private String destinationFolder;
@@ -27,6 +28,11 @@ public class RcloneCommandParser {
 
         public RcloneCommandParserBuilder() {
             this.rcloneCommandParser = new RcloneCommandParser();
+        }
+
+        public RcloneCommandParserBuilder configLocation(String configLocation) {
+            rcloneCommandParser.setConfigLocation(configLocation);
+            return this;
         }
 
         public RcloneCommandParserBuilder transferMethod(String transferMethod) {
@@ -58,6 +64,7 @@ public class RcloneCommandParser {
             List<String> command = new ArrayList<>();
             command.add("rclone");
             command.add("-v");
+            command.add("--config=" + rcloneCommandParser.getConfigLocation());
 
             // Add transfer method
             command.add(rcloneCommandParser.getTransferMethod());

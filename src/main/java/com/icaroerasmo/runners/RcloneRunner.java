@@ -48,13 +48,15 @@ public class RcloneRunner implements ConfigYaml {
     public Void run() {
         log.info("Running rclone");
 
-        final List<String> command = RcloneCommandParser.builder()
+        final RcloneCommandParser.RcloneCommandParserBuilder command = RcloneCommandParser.builder()
+                .configLocation(rcloneProperties.getConfigLocation())
                 .transferMethod(rcloneProperties.getTransferMethod())
                 .sourceFolder(storageProperties.getRecordsFolder())
                 .destinationFolder(rcloneProperties.getDestinationFolder())
                 .excludePatterns(rcloneProperties.getExcludePatterns())
-                .ignoreExisting(rcloneProperties.isIgnoreExisting())
-                .buildAsList();
+                .ignoreExisting(rcloneProperties.isIgnoreExisting());
+
+        log.info("Rclone command: {}", command.build());
 
         MessagesEnum message = MessagesEnum.RCLONE_SUCCESS;
         Process process = null;
@@ -65,7 +67,7 @@ public class RcloneRunner implements ConfigYaml {
 
         try {
 
-            process = new ProcessBuilder(command).start();
+            process = new ProcessBuilder(command.buildAsList()).start();
 
             Process finalProcess = process;
 

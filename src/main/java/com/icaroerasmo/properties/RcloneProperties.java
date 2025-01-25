@@ -11,6 +11,7 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "rclone")
 public class RcloneProperties {
+    private String configLocation = "/app/config/rclone.conf";
     private String executionInterval = "10m";
     private String transferMethod = "copy";
     private String destinationFolder;

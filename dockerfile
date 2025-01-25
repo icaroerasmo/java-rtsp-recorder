@@ -5,5 +5,10 @@ COPY pom.xml .
 RUN mvn clean package
 
 FROM amazoncorretto:21-alpine
-COPY --from=build /app/target/double-take-telegram-notifier-*.jar /app/double-take-telegram-notifier.jar
+RUN mkdir -p /app/data/tmp /app/data/records
+RUN apk add --no-cache rclone
+RUN apk add --no-cache translate-shell
+RUN apk add --no-cache ffmpeg
+COPY --from=build /app/target/java-rtsp-recorder-*.jar /app/java-rtsp-recorder.jar
+RUN ls -la /app
 ENTRYPOINT [ "java", "-Dspring.config.additional-location=optional:/app/config/config.yaml", "-jar", "/app/java-rtsp-recorder.jar" ]
