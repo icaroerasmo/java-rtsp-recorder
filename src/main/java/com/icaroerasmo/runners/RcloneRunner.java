@@ -149,8 +149,7 @@ public class RcloneRunner implements ConfigYaml {
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
             request = new SendMessage(telegramProperties.getChatId(),
                     translateShellRunner.translateText(
-                            messagesEnum.getMessage()+". "+
-                            MessagesEnum.RCLONE_NO_LOGS.getMessage().
+                            (messagesEnum.getMessage()+". "+MessagesEnum.RCLONE_NO_LOGS.getMessage()).
                             formatted(formattedDateForCaption(LocalDateTime.now()))));
         } else {
             request = new SendDocument(telegramProperties.getChatId(),
