@@ -1,4 +1,5 @@
 general:
+  timezone: "America/Bahia"
   locale: "pt-BR"
 
 telegram:
