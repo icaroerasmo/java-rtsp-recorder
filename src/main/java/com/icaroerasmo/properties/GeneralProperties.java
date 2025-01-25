@@ -8,5 +8,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "general")
 public class GeneralProperties {
+    private String timezone;
     private String locale;
 }
