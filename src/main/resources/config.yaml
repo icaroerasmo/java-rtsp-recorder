@@ -1,0 +1,34 @@
+general:
+  locale: "pt-BR"
+
+telegram:
+  chat_id: "-1000000000000"
+  bot_token: "0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3"
+
+rclone:
+  execution-interval: 10m
+  transfer-method: "copy"
+  destination-folder: "<Destination drive>:/<destinationFolder>"
+  exclude-patterns:
+    - "**/.index"
+  ignore-existing: true
+
+storage:
+  video-duration: 5m
+  file-mover-sleep: 1m
+  tmp-folder: "/tmp"
+  records-folder: "/records"
+  max-records-size: 10G
+
+rtsp:
+    cameras:
+        - name: back-door"
+          host: "<hostname>"
+          port: 554
+          protocol: "<udp or tcp accordingly with your camera requirements>"
+          username: "<username>"
+          password: "<password>"
+        - name: hallway
+          url: "rtsp://<username>:<password>@<host>:<port>/<path>"
+          protocol: "<udp or tcp accordingly with your camera requirements>"
+
