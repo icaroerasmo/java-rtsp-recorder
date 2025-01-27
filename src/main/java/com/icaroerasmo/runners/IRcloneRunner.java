@@ -10,8 +10,8 @@ import java.time.format.FormatStyle;
 public interface IRcloneRunner {
 
     Void run();
-    void start(CommandParser.CommandParserBuilder command, MessagesEnum message);
-    void sendStartNotification();
+    void start(CommandParser.CommandParserBuilder command);
+    void sendStartNotification(MessagesEnum messagesEnum);
     void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum);
 
     default String formattedDateForCaption(LocalDateTime time) {

@@ -16,7 +16,11 @@ public class RcloneDeleteCommandParser implements CommandParser {
 
     public static class RcloneDeleteCommandParserBuilder implements CommandParserBuilder {
 
-        private RcloneDeleteCommandParser rcloneDeleteCommandParser;
+        private final RcloneDeleteCommandParser rcloneDeleteCommandParser;
+
+        public RcloneDeleteCommandParserBuilder() {
+            this.rcloneDeleteCommandParser = new RcloneDeleteCommandParser();
+        }
 
         public RcloneDeleteCommandParserBuilder folder(String folder) {
             rcloneDeleteCommandParser.setFolder(folder);
@@ -32,14 +36,6 @@ public class RcloneDeleteCommandParser implements CommandParser {
             command.add(rcloneDeleteCommandParser.getFolder());
             command.add("--min-age");
             command.add("20d");
-            command.add("&&");
-            command.add("rclone");
-            command.add("rmdirs");
-            command.add(rcloneDeleteCommandParser.getFolder());
-            command.add("&&");
-            command.add("rclone");
-            command.add("dedupe");
-            command.add(rcloneDeleteCommandParser.getFolder());
 
             return command;
         }

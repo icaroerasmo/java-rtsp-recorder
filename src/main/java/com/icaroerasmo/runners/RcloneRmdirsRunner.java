@@ -1,6 +1,6 @@
 package com.icaroerasmo.runners;
 
-import com.icaroerasmo.parsers.RcloneDeleteCommandParser;
+import com.icaroerasmo.parsers.RcloneRmdirsCommandParser;
 import com.icaroerasmo.properties.RcloneProperties;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
@@ -13,12 +13,12 @@ import java.util.concurrent.ExecutorService;
 
 @Log4j2
 @Component
-public class RcloneDeleteRunner extends ARcloneRunner {
+public class RcloneRmdirsRunner extends ARcloneRunner {
 
     private final RcloneProperties rcloneProperties;
 
     @Autowired
-    public RcloneDeleteRunner(
+    public RcloneRmdirsRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,
             RcloneProperties rcloneProperties,
@@ -32,7 +32,7 @@ public class RcloneDeleteRunner extends ARcloneRunner {
     public Void run() {
         log.info("Running rclone");
 
-        final RcloneDeleteCommandParser.RcloneDeleteCommandParserBuilder command = RcloneDeleteCommandParser.builder()
+        final RcloneRmdirsCommandParser.RcloneRmdirsCommandParserBuilder command = RcloneRmdirsCommandParser.builder()
                 .folder(rcloneProperties.getDestinationFolder());
 
         log.info("Rclone command: {}", command.build());

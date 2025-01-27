@@ -3,6 +3,9 @@ package com.icaroerasmo.jobs;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
+import com.icaroerasmo.runners.RcloneDedupeRunner;
+import com.icaroerasmo.runners.RcloneDeleteRunner;
+import com.icaroerasmo.runners.RcloneRmdirsRunner;
 import com.icaroerasmo.runners.RcloneSyncRunner;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.FfmpegUtil;
@@ -27,12 +30,15 @@ public class ScheduledTasks {
     private final FfmpegUtil ffmpegUtil;
     private final JavaRtspProperties javaRtspProperties;
     private final RcloneSyncRunner rcloneSyncRunner;
+    private final RcloneDeleteRunner rcloneDeleteRunner;
+    private final RcloneRmdirsRunner rcloneRmdirsRunner;
+    private final RcloneDedupeRunner rcloneDedupeRunner;
     private final FutureStorage futureStorage;
     private final ExecutorService executorService;
 
     @Scheduled(fixedDelayString =
             "#{@propertiesUtil.durationParser(" +
-            "@storageProperties.fileMoverSleep, " +
+            "@storageProperties.fileMoverInterval, " +
             "T(java.util.concurrent.TimeUnit).MILLISECONDS)}")
     private void filesMover() {
 
@@ -66,10 +72,28 @@ public class ScheduledTasks {
 
     @Scheduled(fixedDelayString =
             "#{@propertiesUtil.durationParser(" +
-                    "@rcloneProperties.executionInterval, " +
+                    "@rcloneProperties.syncInterval, " +
                     "T(java.util.concurrent.TimeUnit).MILLISECONDS)}")
-    private void rclone() {
+    private void rcloneSync() {
         Future<Void> future = executorService.submit(rcloneSyncRunner::run);
+        futureStorage.put("rclone", "main", future);
+    }
+
+    @Scheduled(fixedDelay = 5000)
+    private void rcloneDelete() {
+        Future<Void> future = executorService.submit(rcloneDeleteRunner::run);
+        futureStorage.put("rclone", "main", future);
+    }
+
+    @Scheduled(fixedDelay = 5000)
+    private void rcloneRmdirs() {
+        Future<Void> future = executorService.submit(rcloneRmdirsRunner::run);
+        futureStorage.put("rclone", "main", future);
+    }
+
+    @Scheduled(fixedDelay = 5000)
+    private void rcloneDedupe() {
+        Future<Void> future = executorService.submit(rcloneDedupeRunner::run);
         futureStorage.put("rclone", "main", future);
     }
 }
