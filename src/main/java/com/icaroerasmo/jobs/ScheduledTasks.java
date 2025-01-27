@@ -3,7 +3,7 @@ package com.icaroerasmo.jobs;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
-import com.icaroerasmo.runners.RcloneRunner;
+import com.icaroerasmo.runners.RcloneSyncRunner;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.FfmpegUtil;
 import lombok.RequiredArgsConstructor;
@@ -11,9 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,7 +26,7 @@ public class ScheduledTasks {
 
     private final FfmpegUtil ffmpegUtil;
     private final JavaRtspProperties javaRtspProperties;
-    private final RcloneRunner rcloneRunner;
+    private final RcloneSyncRunner rcloneSyncRunner;
     private final FutureStorage futureStorage;
     private final ExecutorService executorService;
 
@@ -71,7 +69,7 @@ public class ScheduledTasks {
                     "@rcloneProperties.executionInterval, " +
                     "T(java.util.concurrent.TimeUnit).MILLISECONDS)}")
     private void rclone() {
-        Future<Void> future = executorService.submit(rcloneRunner::run);
+        Future<Void> future = executorService.submit(rcloneSyncRunner::run);
         futureStorage.put("rclone", "main", future);
     }
 }

@@ -142,70 +142,73 @@ public class FfmpegUtil {
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
         final Path indexFile = recordsFolder.resolve(".index");
 
-        fileNames.parallelStream().map(fileName -> {
-            Map<String, String> dateMap = extractInfoFromFileName(fileName);
-            final Path originPath = tmpFolder.resolve(fileName);
-            final Path destinationFolder =
-                    Paths.get(recordsFolder.toString(), dateMap.get("year"),
-                            dateMap.get("month"), dateMap.get("day"), dateMap.get("hour"), dateMap.get("camName"));
-            final Path destinationPath = destinationFolder.resolve(fileName);
+        fileNames.parallelStream().
+            map(fileName -> Map.entry(fileName, tmpFolder.resolve(fileName))).
+            filter(entry -> Files.exists(entry.getValue())).
+            map(entry -> {
+                final String fileName = entry.getKey();
+                final Path originPath = entry.getValue();
+                final Map<String, String> dateMap = extractInfoFromFileName(fileName);
+                final Path destinationFolder =
+                        Paths.get(recordsFolder.toString(), dateMap.get("year"),
+                                dateMap.get("month"), dateMap.get("day"), dateMap.get("hour"), dateMap.get("camName"));
+                final Path destinationPath = destinationFolder.resolve(fileName);
 
-            if(!Files.exists(destinationFolder)) {
-                try {
-                    Files.createDirectories(destinationFolder);
-                } catch (Exception e) {
-                    log.error("Error creating folder: {}", e.getMessage());
-                    log.debug("Error creating folder: {}", e.getMessage(), e);
-                    throw new RuntimeException(e);
+                if(!Files.exists(destinationFolder)) {
+                    try {
+                        Files.createDirectories(destinationFolder);
+                    } catch (Exception e) {
+                        log.error("Error creating folder: {}", e.getMessage());
+                        log.debug("Error creating folder: {}", e.getMessage(), e);
+                        throw new RuntimeException(e);
+                    }
                 }
-            }
-            return Map.entry(originPath, destinationPath);
-        }).
-        filter(entry -> Files.exists(entry.getKey())).
-        forEach(
-            entry -> {
+                return Map.entry(originPath, destinationPath);
+            }).
+            forEach(
+                entry -> {
 
-                final Path originPath = entry.getKey();
-                final Path destinationPath = entry.getValue();
+                    final Path originPath = entry.getKey();
+                    final Path destinationPath = entry.getValue();
 
-                try {
+                    try {
 
-                    log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
+                        log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
 
-                    long maxFolderSizeInBytes =
-                            propertiesUtil.storageUnitConverter(
-                                    storageProperties.getMaxRecordsFolderSize(), "B");
+                        long maxFolderSizeInBytes =
+                                propertiesUtil.storageUnitConverter(
+                                        storageProperties.getMaxRecordsFolderSize(), "B");
 
-                    long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
-                    long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
-                    long probableSize = sizeOfFolder + sizeOfFile;
+                        long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
+                        long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
+                        long probableSize = sizeOfFolder + sizeOfFile;
 
-                    if(probableSize > maxFolderSizeInBytes) {
-                        deleteFilesToSaveSpace(probableSize-maxFolderSizeInBytes);
+                        if(probableSize > maxFolderSizeInBytes) {
+                            deleteFilesToSaveSpace(probableSize-maxFolderSizeInBytes);
+                        }
+
+                        Files.move(originPath, destinationPath);
+
+                        BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
+
+                        String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
+                        log.info("Writing to index file: {}", csvLine.substring(0, csvLine.length()-1));
+
+                        indexFileLock.lock();
+
+                        Files.write(indexFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+                    } catch (Exception e) {
+                        log.error("Error moving file: {}", e.getMessage(), e);
+                        log.debug("Error moving file: {}", e.getMessage());
+                        return;
+                    } finally {
+                        indexFileLock.unlock();
                     }
 
-                    Files.move(originPath, destinationPath);
-
-                    BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
-
-                    String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
-                    log.info("Writing to index file: {}", csvLine.substring(0, csvLine.length()-1));
-
-                    indexFileLock.lock();
-
-                    Files.write(indexFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-
-                } catch (Exception e) {
-                    log.error("Error moving file: {}", e.getMessage(), e);
-                    log.debug("Error moving file: {}", e.getMessage());
-                    return;
-                } finally {
-                    indexFileLock.unlock();
+                    log.info("File {} moved successfully.", entry.getKey());
                 }
-
-                log.info("File {} moved successfully.", entry.getKey());
-            }
-        );
+            );
 
         log.info("Done moving files to records folder");
     }
