@@ -79,19 +79,19 @@ public class ScheduledTasks {
         futureStorage.put("rclone", "main", future);
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(cron = "#{@rcloneProperties.deleteCron}")
     private void rcloneDelete() {
         Future<Void> future = executorService.submit(rcloneDeleteRunner::run);
         futureStorage.put("rclone", "main", future);
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(cron = "#{@rcloneProperties.rmdirsCron}")
     private void rcloneRmdirs() {
         Future<Void> future = executorService.submit(rcloneRmdirsRunner::run);
         futureStorage.put("rclone", "main", future);
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(cron = "#{@rcloneProperties.dedupeCron}")
     private void rcloneDedupe() {
         Future<Void> future = executorService.submit(rcloneDedupeRunner::run);
         futureStorage.put("rclone", "main", future);

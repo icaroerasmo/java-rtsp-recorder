@@ -12,6 +12,9 @@ import java.util.List;
 @ConfigurationProperties(prefix = "rclone")
 public class RcloneProperties {
     private String configLocation = "/app/config/rclone.conf";
+    private String deleteCron;
+    private String rmdirsCron;
+    private String dedupeCron;
     private String deleteTime = "00:00";
     private String syncInterval = "10m";
     private String transferMethod = "copy";

@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 
 @Log4j2
 @Component
-public class RcloneDeleteRunner extends ARcloneRunner {
+public class RcloneDeleteRunner extends RcloneRunner {
 
     private final RcloneProperties rcloneProperties;
 
@@ -33,6 +33,7 @@ public class RcloneDeleteRunner extends ARcloneRunner {
         log.info("Running rclone");
 
         final RcloneDeleteCommandParser.RcloneDeleteCommandParserBuilder command = RcloneDeleteCommandParser.builder()
+                .configLocation(rcloneProperties.getConfigLocation())
                 .folder(rcloneProperties.getDestinationFolder());
 
         log.info("Rclone command: {}", command.build());

@@ -8,21 +8,27 @@ import java.util.List;
 @Data
 public class RcloneDedupeCommandParser implements CommandParser {
 
+    private String configLocation;
     private String folder;
 
-    public static RcloneDedupeCommandParser.RcloneDedupCommandParserBuilder builder() {
-        return new RcloneDedupeCommandParser.RcloneDedupCommandParserBuilder();
+    public static RcloneDedupeCommandParserBuilder builder() {
+        return new RcloneDedupeCommandParserBuilder();
     }
 
-    public static class RcloneDedupCommandParserBuilder implements CommandParserBuilder {
+    public static class RcloneDedupeCommandParserBuilder implements CommandParserBuilder {
 
         private final RcloneDedupeCommandParser rcloneDeleteCommandParser;
 
-        public RcloneDedupCommandParserBuilder() {
+        public RcloneDedupeCommandParserBuilder() {
             this.rcloneDeleteCommandParser = new RcloneDedupeCommandParser();
         }
 
-        public RcloneDedupCommandParserBuilder folder(String folder) {
+        public RcloneDedupeCommandParserBuilder configLocation(String configLocation) {
+            rcloneDeleteCommandParser.setConfigLocation(configLocation);
+            return this;
+        }
+
+        public RcloneDedupeCommandParserBuilder folder(String folder) {
             rcloneDeleteCommandParser.setFolder(folder);
             return this;
         }
@@ -32,6 +38,8 @@ public class RcloneDedupeCommandParser implements CommandParser {
 
             List<String> command = new ArrayList<>();
             command.add("rclone");
+            command.add("-v");
+            command.add("--config=" + rcloneDeleteCommandParser.getConfigLocation());
             command.add("dedupe");
             command.add(rcloneDeleteCommandParser.getFolder());
 

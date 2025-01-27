@@ -5,7 +5,6 @@ import com.icaroerasmo.parsers.CommandParser;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -25,7 +24,7 @@ import java.util.concurrent.Future;
 
 @Log4j2
 @RequiredArgsConstructor
-public abstract class ARcloneRunner implements IRcloneRunner {
+public abstract class RcloneRunner implements IRcloneRunner {
 
     private final ExecutorService executorService;
     private final FutureStorage futureStorage;

@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 public class RcloneDeleteCommandParser implements CommandParser {
 
+    private String configLocation;
     private String folder;
 
     public static RcloneDeleteCommandParser.RcloneDeleteCommandParserBuilder builder() {
@@ -22,6 +23,11 @@ public class RcloneDeleteCommandParser implements CommandParser {
             this.rcloneDeleteCommandParser = new RcloneDeleteCommandParser();
         }
 
+        public RcloneDeleteCommandParserBuilder configLocation(String configLocation) {
+            rcloneDeleteCommandParser.setConfigLocation(configLocation);
+            return this;
+        }
+
         public RcloneDeleteCommandParserBuilder folder(String folder) {
             rcloneDeleteCommandParser.setFolder(folder);
             return this;
@@ -33,6 +39,8 @@ public class RcloneDeleteCommandParser implements CommandParser {
             List<String> command = new ArrayList<>();
             command.add("rclone");
             command.add("delete");
+            command.add("-v");
+            command.add("--config=" + rcloneDeleteCommandParser.getConfigLocation());
             command.add(rcloneDeleteCommandParser.getFolder());
             command.add("--min-age");
             command.add("20d");

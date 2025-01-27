@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 
 @Log4j2
 @Component
-public class RcloneRmdirsRunner extends ARcloneRunner {
+public class RcloneRmdirsRunner extends RcloneRunner {
 
     private final RcloneProperties rcloneProperties;
 
@@ -33,6 +33,7 @@ public class RcloneRmdirsRunner extends ARcloneRunner {
         log.info("Running rclone");
 
         final RcloneRmdirsCommandParser.RcloneRmdirsCommandParserBuilder command = RcloneRmdirsCommandParser.builder()
+                .configLocation(rcloneProperties.getConfigLocation())
                 .folder(rcloneProperties.getDestinationFolder());
 
         log.info("Rclone command: {}", command.build());

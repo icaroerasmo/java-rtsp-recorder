@@ -1,6 +1,6 @@
 package com.icaroerasmo.runners;
 
-import com.icaroerasmo.parsers.RcloneRmdirsCommandParser;
+import com.icaroerasmo.parsers.RcloneDedupeCommandParser;
 import com.icaroerasmo.properties.RcloneProperties;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 
 @Log4j2
 @Component
-public class RcloneDedupeRunner extends ARcloneRunner {
+public class RcloneDedupeRunner extends RcloneRunner {
 
     private final RcloneProperties rcloneProperties;
 
@@ -32,7 +32,8 @@ public class RcloneDedupeRunner extends ARcloneRunner {
     public Void run() {
         log.info("Running rclone");
 
-        final RcloneRmdirsCommandParser.RcloneRmdirsCommandParserBuilder command = RcloneRmdirsCommandParser.builder()
+        final RcloneDedupeCommandParser.RcloneDedupeCommandParserBuilder command = RcloneDedupeCommandParser.builder()
+                .configLocation(rcloneProperties.getConfigLocation())
                 .folder(rcloneProperties.getDestinationFolder());
 
         log.info("Rclone command: {}", command.build());
