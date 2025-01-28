@@ -7,6 +7,10 @@ telegram:
   bot_token: "0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3"
 
 rclone:
+  delete-cron: "0 0 0 * * *"
+  rmdirs-cron: "0 10 0 * * *"
+  dedupe-cron: "0 20 0 * * *"
+  sync-cron: "0 */10 * * * *"
   execution-interval: 10m
   transfer-method: "copy"
   destination-folder: "<Destination drive>:/<destinationFolder>"
@@ -16,7 +20,7 @@ rclone:
 
 storage:
   video-duration: 5m
-  file-mover-sleep: 1m
+  file-mover-interval: 5m
   tmp-folder: "/tmp"
   records-folder: "/records"
   max-records-size: 10G
@@ -24,8 +28,9 @@ storage:
 rtsp:
     cameras:
         - name: back-door"
-          host: "<hostname>"
+          host: "<host>"
           port: 554
+          format: "<camera format>"
           protocol: "<udp or tcp accordingly with your camera requirements>"
           username: "<username>"
           password: "<password>"

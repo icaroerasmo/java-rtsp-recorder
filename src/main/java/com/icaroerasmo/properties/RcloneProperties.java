@@ -12,7 +12,10 @@ import java.util.List;
 @ConfigurationProperties(prefix = "rclone")
 public class RcloneProperties {
     private String configLocation = "/app/config/rclone.conf";
-    private String executionInterval = "10m";
+    private String deleteCron = "0 0 0 * * *";
+    private String rmdirsCron = "0 10 0 * * *";
+    private String dedupeCron = "0 20 0 * * *";
+    private String syncCron = "0 */10 * * * *";
     private String transferMethod = "copy";
     private String destinationFolder;
     private List<String> excludePatterns = new ArrayList<>();

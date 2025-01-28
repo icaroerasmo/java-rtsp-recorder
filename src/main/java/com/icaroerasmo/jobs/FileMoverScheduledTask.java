@@ -3,7 +3,10 @@ package com.icaroerasmo.jobs;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
-import com.icaroerasmo.runners.RcloneRunner;
+import com.icaroerasmo.runners.RcloneDedupeRunner;
+import com.icaroerasmo.runners.RcloneDeleteRunner;
+import com.icaroerasmo.runners.RcloneRmdirsRunner;
+import com.icaroerasmo.runners.RcloneSyncRunner;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.FfmpegUtil;
 import lombok.RequiredArgsConstructor;
@@ -11,9 +14,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,17 +25,14 @@ import java.util.concurrent.Future;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class ScheduledTasks {
+public class FileMoverScheduledTask {
 
     private final FfmpegUtil ffmpegUtil;
     private final JavaRtspProperties javaRtspProperties;
-    private final RcloneRunner rcloneRunner;
-    private final FutureStorage futureStorage;
-    private final ExecutorService executorService;
 
     @Scheduled(fixedDelayString =
             "#{@propertiesUtil.durationParser(" +
-            "@storageProperties.fileMoverSleep, " +
+            "@storageProperties.fileMoverInterval, " +
             "T(java.util.concurrent.TimeUnit).MILLISECONDS)}")
     private void filesMover() {
 
@@ -64,14 +62,5 @@ public class ScheduledTasks {
         ffmpegUtil.deleteEmptyFolders(Paths.get(storageProperties.getRecordsFolder()));
 
         log.info("Finished job to move files to records folder");
-    }
-
-    @Scheduled(fixedDelayString =
-            "#{@propertiesUtil.durationParser(" +
-                    "@rcloneProperties.executionInterval, " +
-                    "T(java.util.concurrent.TimeUnit).MILLISECONDS)}")
-    private void rclone() {
-        Future<Void> future = executorService.submit(rcloneRunner::run);
-        futureStorage.put("rclone", "main", future);
     }
 }

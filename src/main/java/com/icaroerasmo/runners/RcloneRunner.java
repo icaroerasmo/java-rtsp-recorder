@@ -1,75 +1,55 @@
 package com.icaroerasmo.runners;
 
 import com.icaroerasmo.enums.MessagesEnum;
-import com.icaroerasmo.parsers.RcloneCommandParser;
-import com.icaroerasmo.properties.ConfigYaml;
-import com.icaroerasmo.properties.RcloneProperties;
-import com.icaroerasmo.properties.StorageProperties;
+import com.icaroerasmo.parsers.CommandParser;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Log4j2
-@Getter
-@Component
 @RequiredArgsConstructor
-public class RcloneRunner implements ConfigYaml {
+public abstract class RcloneRunner implements IRcloneRunner {
 
     private final ExecutorService executorService;
     private final FutureStorage futureStorage;
-    private final RcloneProperties rcloneProperties;
     private final TelegramProperties telegramProperties;
-    private final StorageProperties storageProperties;
     private final TelegramBot telegram;
     private final TranslateShellRunner translateShellRunner;
 
     @SneakyThrows
-    public Void run() {
-        log.info("Running rclone");
-
-        final RcloneCommandParser.RcloneCommandParserBuilder command = RcloneCommandParser.builder()
-                .configLocation(rcloneProperties.getConfigLocation())
-                .transferMethod(rcloneProperties.getTransferMethod())
-                .sourceFolder(storageProperties.getRecordsFolder())
-                .destinationFolder(rcloneProperties.getDestinationFolder())
-                .excludePatterns(rcloneProperties.getExcludePatterns())
-                .ignoreExisting(rcloneProperties.isIgnoreExisting());
-
-        log.info("Rclone command: {}", command.build());
-
-        MessagesEnum message = MessagesEnum.RCLONE_SUCCESS;
+    public void start(CommandParser.CommandParserBuilder command) {
         Process process = null;
         Future<StringBuilder> outputLogsFuture = null;
         Future<StringBuilder> errorLogsFuture = null;
 
-        sendSynchronizationStartedNotification();
+        final List<String> commandList = command.buildAsList();
+
+        MessagesEnum startMessage = startProcessMessagePicker(commandList.get(1));
+        MessagesEnum failedMessage = successMessagePicker(commandList.get(1));
+
+        sendStartNotification(startMessage);
 
         try {
 
-            process = new ProcessBuilder(command.buildAsList()).start();
+            process = new ProcessBuilder(commandList).start();
 
-            Process finalProcess = process;
+            final Process finalProcess = process;
 
             outputLogsFuture = executorService.submit(() -> {
 
@@ -105,8 +85,9 @@ public class RcloneRunner implements ConfigYaml {
                 return errorLogs;
             });
 
-            futureStorage.put("rclone", "outputLogsFuture", outputLogsFuture);
-            futureStorage.put("rclone", "errorLogsFuture", errorLogsFuture);
+
+            futureStorage.put("rclone", commandList.get(1) + " outputLogsFuture", outputLogsFuture);
+            futureStorage.put("rclone", commandList.get(1) + " errorLogsFuture", errorLogsFuture);
 
             int exitCode = process.waitFor();
 
@@ -124,7 +105,7 @@ public class RcloneRunner implements ConfigYaml {
                 log.error("Rclone: {}", e.getMessage());
             }
 
-            message = MessagesEnum.RCLONE_ERROR;
+            failedMessage = errorMessagePicker(commandList.get(1));
 
         } finally {
 
@@ -134,23 +115,27 @@ public class RcloneRunner implements ConfigYaml {
 
             final StringBuilder outputLogs = errorLogsFuture != null ? errorLogsFuture.get() : null;
 
-            sendSynchronizationEndedNotification(outputLogs, message);
+            sendEndNotification(outputLogs, failedMessage);
         }
-
-        log.info("Rclone finished.");
-
-        return null;
     }
 
-    private void sendSynchronizationEndedNotification(StringBuilder outputLogs, MessagesEnum messagesEnum) {
+    @Override
+    public void sendStartNotification(MessagesEnum message) {
+        final SendMessage request = new SendMessage(telegramProperties.getChatId(),
+                translateShellRunner.translateText(message.getMessage().
+                        formatted(formattedDateForCaption(LocalDateTime.now()))));
+        telegram.execute(request);
+    }
 
+    @Override
+    public void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum) {
         BaseRequest<?, ?> request = null;
 
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
             request = new SendMessage(telegramProperties.getChatId(),
                     translateShellRunner.translateText(
                             (messagesEnum.getMessage()+". "+MessagesEnum.RCLONE_NO_LOGS.getMessage()).
-                            formatted(formattedDateForCaption(LocalDateTime.now()))));
+                                    formatted(formattedDateForCaption(LocalDateTime.now()))));
         } else {
             request = new SendDocument(telegramProperties.getChatId(),
                     outputLogs.toString().getBytes(StandardCharsets.UTF_8)).
@@ -163,26 +148,30 @@ public class RcloneRunner implements ConfigYaml {
         telegram.execute(request);
     }
 
-    private void sendSynchronizationStartedNotification() {
-        final SendMessage request = new SendMessage(telegramProperties.getChatId(),
-                translateShellRunner.translateText("Synchronization started in %s successfully.".
-                        formatted(formattedDateForCaption(LocalDateTime.now()))));
-        telegram.execute(request);
+    private MessagesEnum startProcessMessagePicker(String command) {
+        return switch (command) {
+            case "delete" -> MessagesEnum.RCLONE_DELETE_START;
+            case "rmdirs" -> MessagesEnum.RCLONE_RMDIRS_START;
+            case "dedupe" -> MessagesEnum.RCLONE_DEDUPE_START;
+            default -> MessagesEnum.RCLONE_SYNC_START;
+        };
     }
 
-    private String formattedDateForCaption(LocalDateTime time) {
-        final String timeFormatPattern = " 'at' HH:mm:ss";
-        return dateTimeFormatter(timeFormatPattern, time);
+    private MessagesEnum successMessagePicker(String command) {
+        return switch (command) {
+            case "delete" -> MessagesEnum.RCLONE_DELETE_SUCCESS;
+            case "rmdirs" -> MessagesEnum.RCLONE_RMDIRS_SUCCESS;
+            case "dedupe" -> MessagesEnum.RCLONE_DEDUPE_SUCCESS;
+            default -> MessagesEnum.RCLONE_SYNC_SUCCESS;
+        };
     }
 
-    private String formattedDateForLogName(LocalDateTime time) {
-        final String timeFormatPattern = "_HH-mm-ss";
-        return dateTimeFormatter(timeFormatPattern, time).replace("/", "-");
-    }
-
-    private static String dateTimeFormatter(String timeFormatPattern, LocalDateTime time) {
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(timeFormatPattern);
-        return time.format(dateFormatter) + time.format(timeFormatter);
+    private MessagesEnum errorMessagePicker(String command) {
+        return switch (command) {
+            case "delete" -> MessagesEnum.RCLONE_DELETE_ERROR;
+            case "rmdirs" -> MessagesEnum.RCLONE_RMDIRS_ERROR;
+            case "dedupe" -> MessagesEnum.RCLONE_DEDUPE_ERROR;
+            default -> MessagesEnum.RCLONE_SYNC_ERROR;
+        };
     }
 }

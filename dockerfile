@@ -6,6 +6,7 @@ RUN mvn clean package
 
 FROM amazoncorretto:21-alpine
 RUN mkdir -p /app/data/tmp /app/data/records
+RUN apk add --no-cache tzdata
 RUN apk add --no-cache rclone
 RUN apk add --no-cache translate-shell
 RUN apk add --no-cache ffmpeg

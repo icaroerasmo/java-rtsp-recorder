@@ -4,10 +4,12 @@ import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.util.PropertiesUtil;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Data
-public class FfmpegCommandParser {
+public class FfmpegCommandParser implements CommandParser {
 
     private String timeout;
     private String url;
@@ -21,10 +23,9 @@ public class FfmpegCommandParser {
         return new FfmpegCommandParserBuilder();
     }
 
-    public static class FfmpegCommandParserBuilder {
+    public static class FfmpegCommandParserBuilder implements CommandParserBuilder {
 
         private final PropertiesUtil propertiesUtil = new PropertiesUtil();
-
         private final FfmpegCommandParser ffmpegCommandParser;
 
         public FfmpegCommandParserBuilder() {
@@ -70,13 +71,13 @@ public class FfmpegCommandParser {
             return this;
         }
 
-        public String build() {
-
-            if(ffmpegCommandParser.getUrl() == null || ffmpegCommandParser.getUrl().isBlank()) {
+        @Override
+        public List<String> buildAsList() {
+            if (ffmpegCommandParser.getUrl() == null || ffmpegCommandParser.getUrl().isBlank()) {
                 throw new IllegalArgumentException("Url is required");
             }
 
-            if(ffmpegCommandParser.getTmpPath() == null || ffmpegCommandParser.getTmpPath().isBlank()) {
+            if (ffmpegCommandParser.getTmpPath() == null || ffmpegCommandParser.getTmpPath().isBlank()) {
                 throw new IllegalArgumentException("TmpPath is required");
             }
 
@@ -84,39 +85,42 @@ public class FfmpegCommandParser {
                 throw new IllegalArgumentException("CameraName is required");
             }
 
-            StringBuilder strBuilder = new StringBuilder();
+            List<String> command = new ArrayList<>();
+            command.add("ffmpeg");
+            command.add("-rtsp_transport");
+            command.add(ffmpegCommandParser.getTransportProtocol());
+            command.add("-i");
+            command.add(ffmpegCommandParser.getUrl());
+            command.add("-c");
+            command.add("copy");
 
-            strBuilder.append("ffmpeg ");
-
-            strBuilder.append("-rtsp_transport %s ".formatted(ffmpegCommandParser.getTransportProtocol()));
-
-            strBuilder.append("-i %s -c copy ".formatted(ffmpegCommandParser.getUrl()));
-
-            if(ffmpegCommandParser.getTimeout() != null) {
-                strBuilder.append("-rw_timeout %s ".formatted(propertiesUtil.durationParser(ffmpegCommandParser.getTimeout(), TimeUnit.MILLISECONDS)));
+            if (ffmpegCommandParser.getTimeout() != null) {
+                command.add("-rw_timeout");
+                command.add(String.valueOf(propertiesUtil.durationParser(ffmpegCommandParser.getTimeout(), TimeUnit.MILLISECONDS)));
             }
 
-            if(ffmpegCommandParser.getDoneSegmentsListSize() != null &&
-                    ffmpegCommandParser.getVideoDuration() != null) {
-
-                strBuilder.append("-f segment ");
+            if (ffmpegCommandParser.getDoneSegmentsListSize() != null && ffmpegCommandParser.getVideoDuration() != null) {
+                command.add("-f");
+                command.add("segment");
 
                 final String doneSegmentsList = ffmpegCommandParser.getTmpPath() +
-                        "/.%s_done_segments".formatted(ffmpegCommandParser.getCameraName());
+                        "/." + ffmpegCommandParser.getCameraName() + "_done_segments";
 
-                strBuilder.append("-segment_list %s ".formatted(doneSegmentsList));
-                strBuilder.append("-segment_list_size %s ".formatted(ffmpegCommandParser.getDoneSegmentsListSize()));
-                strBuilder.append("-strftime 1 ");
-                strBuilder.append("-segment_time %s ".formatted(
-                        propertiesUtil.durationParser(ffmpegCommandParser.getVideoDuration(), TimeUnit.SECONDS)));
-                strBuilder.append("-reset_timestamps 1 ");
-
+                command.add("-segment_list");
+                command.add(doneSegmentsList);
+                command.add("-segment_list_size");
+                command.add(String.valueOf(ffmpegCommandParser.getDoneSegmentsListSize()));
+                command.add("-strftime");
+                command.add("1");
+                command.add("-segment_time");
+                command.add(String.valueOf(propertiesUtil.durationParser(ffmpegCommandParser.getVideoDuration(), TimeUnit.SECONDS)));
+                command.add("-reset_timestamps");
+                command.add("1");
             }
 
-            strBuilder.append("%s/%s%%Y-%%m-%%d_%%H-%%M-%%S.mkv".
-                    formatted(ffmpegCommandParser.getTmpPath(), ffmpegCommandParser.getCameraName()));
+            command.add(ffmpegCommandParser.getTmpPath() + "/" + ffmpegCommandParser.getCameraName() + "%Y-%m-%d_%H-%M-%S.mkv");
 
-            return strBuilder.toString();
+            return command;
         }
     }
 }
