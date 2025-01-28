@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.icaroerasmo</groupId>
   <artifactId>java-rtsp-recorder</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <name>Java RTSP Recorder</name>
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
@@ -41,18 +41,6 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
-<!--      <plugin>-->
-<!--        <groupId>org.apache.maven.plugins</groupId>-->
-<!--        <artifactId>maven-compiler-plugin</artifactId>-->
-<!--        <configuration>-->
-<!--          <annotationProcessorPaths>-->
-<!--            <path>-->
-<!--              <groupId>org.projectlombok</groupId>-->
-<!--              <artifactId>lombok</artifactId>-->
-<!--            </path>-->
-<!--          </annotationProcessorPaths>-->
-<!--        </configuration>-->
-<!--      </plugin>-->
     </plugins>
   </build>
 </project>
