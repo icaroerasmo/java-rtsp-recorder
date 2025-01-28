@@ -25,16 +25,10 @@ import java.util.concurrent.Future;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class ScheduledTasks {
+public class FileMoverScheduledTask {
 
     private final FfmpegUtil ffmpegUtil;
     private final JavaRtspProperties javaRtspProperties;
-    private final RcloneSyncRunner rcloneSyncRunner;
-    private final RcloneDeleteRunner rcloneDeleteRunner;
-    private final RcloneRmdirsRunner rcloneRmdirsRunner;
-    private final RcloneDedupeRunner rcloneDedupeRunner;
-    private final FutureStorage futureStorage;
-    private final ExecutorService executorService;
 
     @Scheduled(fixedDelayString =
             "#{@propertiesUtil.durationParser(" +
@@ -68,32 +62,5 @@ public class ScheduledTasks {
         ffmpegUtil.deleteEmptyFolders(Paths.get(storageProperties.getRecordsFolder()));
 
         log.info("Finished job to move files to records folder");
-    }
-
-    @Scheduled(fixedDelayString =
-            "#{@propertiesUtil.durationParser(" +
-                    "@rcloneProperties.syncInterval, " +
-                    "T(java.util.concurrent.TimeUnit).MILLISECONDS)}")
-    private void rcloneSync() {
-        Future<Void> future = executorService.submit(rcloneSyncRunner::run);
-        futureStorage.put("rclone", "main", future);
-    }
-
-    @Scheduled(cron = "#{@rcloneProperties.deleteCron}")
-    private void rcloneDelete() {
-        Future<Void> future = executorService.submit(rcloneDeleteRunner::run);
-        futureStorage.put("rclone", "main", future);
-    }
-
-    @Scheduled(cron = "#{@rcloneProperties.rmdirsCron}")
-    private void rcloneRmdirs() {
-        Future<Void> future = executorService.submit(rcloneRmdirsRunner::run);
-        futureStorage.put("rclone", "main", future);
-    }
-
-    @Scheduled(cron = "#{@rcloneProperties.dedupeCron}")
-    private void rcloneDedupe() {
-        Future<Void> future = executorService.submit(rcloneDedupeRunner::run);
-        futureStorage.put("rclone", "main", future);
     }
 }
