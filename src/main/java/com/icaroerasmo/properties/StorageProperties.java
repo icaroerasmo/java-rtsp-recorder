@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "storage")
 public class StorageProperties implements ConfigYaml {
     private String fileMoverInterval = "1m";
-    private String tmpFolder = "/app/tmp";
-    private String recordsFolder = "/app/records";
+    private String tmpFolder = "/app/data/tmp";
+    private String recordsFolder = "/app/data/records";
     private String maxRecordsFolderSize = "10G";
 }
