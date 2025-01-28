@@ -10,6 +10,10 @@ RUN apk add --no-cache tzdata
 RUN apk add --no-cache rclone
 RUN apk add --no-cache translate-shell
 RUN apk add --no-cache ffmpeg
+
+ARG TZ
+ENV TZ $TZ
+
 COPY --from=build /app/target/java-rtsp-recorder-*.jar /app/java-rtsp-recorder.jar
 RUN ls -la /app
 ENTRYPOINT [ "java", "-Dspring.config.additional-location=optional:/app/config/config.yaml", "-jar", "/app/java-rtsp-recorder.jar" ]
