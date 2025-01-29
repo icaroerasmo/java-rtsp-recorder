@@ -40,9 +40,9 @@ public abstract class RcloneRunner implements IRcloneRunner {
 
         final List<String> commandList = command.buildAsList();
 
-        MessagesEnum message = startProcessMessagePicker(commandList);
+        sendStartNotification(startProcessMessagePicker(commandList));
 
-        sendStartNotification(message);
+        MessagesEnum message = successMessagePicker(commandList);
 
         try {
 
