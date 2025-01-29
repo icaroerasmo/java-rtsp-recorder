@@ -38,9 +38,9 @@ public class RcloneDeleteCommandParser implements CommandParser {
 
             List<String> command = new ArrayList<>();
             command.add("rclone");
-            command.add("delete");
             command.add("-v");
             command.add("--config=" + rcloneDeleteCommandParser.getConfigLocation());
+            command.add("delete");
             command.add(rcloneDeleteCommandParser.getFolder());
             command.add("--min-age");
             command.add("20d");

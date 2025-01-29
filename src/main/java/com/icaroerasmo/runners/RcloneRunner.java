@@ -40,10 +40,9 @@ public abstract class RcloneRunner implements IRcloneRunner {
 
         final List<String> commandList = command.buildAsList();
 
-        MessagesEnum startMessage = startProcessMessagePicker(commandList.get(1));
-        MessagesEnum failedMessage = successMessagePicker(commandList.get(1));
+        MessagesEnum message = startProcessMessagePicker(commandList);
 
-        sendStartNotification(startMessage);
+        sendStartNotification(message);
 
         try {
 
@@ -105,7 +104,7 @@ public abstract class RcloneRunner implements IRcloneRunner {
                 log.error("Rclone: {}", e.getMessage());
             }
 
-            failedMessage = errorMessagePicker(commandList.get(1));
+            message = errorMessagePicker(commandList);
 
         } finally {
 
@@ -115,7 +114,7 @@ public abstract class RcloneRunner implements IRcloneRunner {
 
             final StringBuilder outputLogs = errorLogsFuture != null ? errorLogsFuture.get() : null;
 
-            sendEndNotification(outputLogs, failedMessage);
+            sendEndNotification(outputLogs, message);
         }
     }
 
@@ -148,30 +147,39 @@ public abstract class RcloneRunner implements IRcloneRunner {
         telegram.execute(request);
     }
 
-    private MessagesEnum startProcessMessagePicker(String command) {
-        return switch (command) {
-            case "delete" -> MessagesEnum.RCLONE_DELETE_START;
-            case "rmdirs" -> MessagesEnum.RCLONE_RMDIRS_START;
-            case "dedupe" -> MessagesEnum.RCLONE_DEDUPE_START;
-            default -> MessagesEnum.RCLONE_SYNC_START;
-        };
+    private MessagesEnum startProcessMessagePicker(List<String> command) {
+        if(command.contains("delete")) {
+            return MessagesEnum.RCLONE_DELETE_START;
+        } else if(command.contains("rmdirs")) {
+            return MessagesEnum.RCLONE_RMDIRS_START;
+        } else if(command.contains("dedupe")) {
+            return MessagesEnum.RCLONE_DEDUPE_START;
+        } else {
+            return MessagesEnum.RCLONE_SYNC_START;
+        }
     }
 
-    private MessagesEnum successMessagePicker(String command) {
-        return switch (command) {
-            case "delete" -> MessagesEnum.RCLONE_DELETE_SUCCESS;
-            case "rmdirs" -> MessagesEnum.RCLONE_RMDIRS_SUCCESS;
-            case "dedupe" -> MessagesEnum.RCLONE_DEDUPE_SUCCESS;
-            default -> MessagesEnum.RCLONE_SYNC_SUCCESS;
-        };
+    private MessagesEnum successMessagePicker(List<String> command) {
+        if(command.contains("delete")) {
+            return MessagesEnum.RCLONE_DELETE_SUCCESS;
+        } else if(command.contains("rmdirs")) {
+            return MessagesEnum.RCLONE_RMDIRS_SUCCESS;
+        } else if(command.contains("dedupe")) {
+            return MessagesEnum.RCLONE_DEDUPE_SUCCESS;
+        } else {
+            return MessagesEnum.RCLONE_SYNC_SUCCESS;
+        }
     }
 
-    private MessagesEnum errorMessagePicker(String command) {
-        return switch (command) {
-            case "delete" -> MessagesEnum.RCLONE_DELETE_ERROR;
-            case "rmdirs" -> MessagesEnum.RCLONE_RMDIRS_ERROR;
-            case "dedupe" -> MessagesEnum.RCLONE_DEDUPE_ERROR;
-            default -> MessagesEnum.RCLONE_SYNC_ERROR;
-        };
+    private MessagesEnum errorMessagePicker(List<String> command) {
+        if(command.contains("delete")) {
+            return MessagesEnum.RCLONE_DELETE_ERROR;
+        } else if(command.contains("rmdirs")) {
+            return MessagesEnum.RCLONE_RMDIRS_ERROR;
+        } else if(command.contains("dedupe")) {
+            return MessagesEnum.RCLONE_DEDUPE_ERROR;
+        } else {
+            return MessagesEnum.RCLONE_SYNC_ERROR;
+        }
     }
 }
