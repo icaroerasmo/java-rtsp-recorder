@@ -1,40 +1,40 @@
 general:
-  timezone: "America/Bahia"
-  locale: "pt-BR"
+  timezone: 'America/Bahia'
+  locale: 'pt-BR'
 
 telegram:
-  chat_id: "-1000000000000"
-  bot_token: "0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3"
+  chat_id: '-1000000000000'
+  bot_token: '0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3'
 
 rclone:
-  delete-cron: "0 0 0 * * *"
-  rmdirs-cron: "0 10 0 * * *"
-  dedupe-cron: "0 20 0 * * *"
-  sync-cron: "0 */10 * * * *"
+  delete-cron: '0 0 0 * * *'
+  rmdirs-cron: '0 10 0 * * *'
+  dedupe-cron: '0 20 0 * * *'
+  sync-cron: '0 */10 * * * *'
   execution-interval: 10m
-  transfer-method: "copy"
-  destination-folder: "<Destination drive>:/<destinationFolder>"
+  transfer-method: 'copy'
+  destination-folder: '<Destination drive>:/<destinationFolder>'
   exclude-patterns:
-    - "**/.index"
+    - '*.index'
   ignore-existing: true
 
 storage:
   video-duration: 5m
   file-mover-interval: 5m
-  tmp-folder: "/tmp"
-  records-folder: "/records"
+  tmp-folder: '/tmp'
+  records-folder: '/records'
   max-records-size: 10G
 
 rtsp:
     cameras:
-        - name: back-door"
-          host: "<host>"
+        - name: back-door'
+          host: '<host>'
           port: 554
-          format: "<camera format>"
-          protocol: "<udp or tcp accordingly with your camera requirements>"
-          username: "<username>"
-          password: "<password>"
+          format: '<camera format>'
+          protocol: '<udp or tcp accordingly with your camera requirements>'
+          username: '<username>'
+          password: '<password>'
         - name: hallway
-          url: "rtsp://<username>:<password>@<host>:<port>/<path>"
-          protocol: "<udp or tcp accordingly with your camera requirements>"
+          url: 'rtsp://<username>:<password>@<host>:<port>/<path>'
+          protocol: '<udp or tcp accordingly with your camera requirements>'
 
