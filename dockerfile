@@ -12,7 +12,11 @@ RUN apk add --no-cache translate-shell
 RUN apk add --no-cache ffmpeg
 
 ARG TZ
+ARG LANGUAGE
 ENV TZ $TZ
+ENV LANGUAGE ${LANGUAGE}.UTF-8
+ENV LANG ${LANGUAGE}.UTF-8
+ENV LC_ALL ${LANGUAGE}.UTF-8
 
 COPY --from=build /app/target/java-rtsp-recorder-*.jar /app/java-rtsp-recorder.jar
 RUN ls -la /app
