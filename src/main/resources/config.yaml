@@ -1,40 +1,45 @@
 general:
-  timezone: 'America/Bahia'
-  locale: 'pt-BR'
+  timezone: "America/Bahia" # default value is container locale
+  locale: 'pt-BR' # default value is 'en-GB'
 
 telegram:
-  chat_id: '-1000000000000'
-  bot_token: '0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3'
+  chat_id: '-1000000000000' # mandatory
+  bot_token: '0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3' # mandatory
 
 rclone:
-  delete-cron: '0 0 0 * * *'
-  rmdirs-cron: '0 10 0 * * *'
-  dedupe-cron: '0 20 0 * * *'
-  sync-cron: '0 */10 * * * *'
-  execution-interval: 10m
-  transfer-method: 'copy'
-  destination-folder: '<Destination drive>:/<destinationFolder>'
+  config-location: '/app/config/rclone.conf' # default value is '/app/config/rclone.conf'
+  delete-cron: '0 0 1 * * *' # default value is '0 0 0 * * *' (midnight)
+  rmdirs-cron: '0 10 1 * * *' # default value is '0 10 0 * * *' (10 minutes past midnight)
+  dedupe-cron: '0 20 1 * * *' # default value is '0 20 0 * * *' (20 minutes past midnight)
+  sync-cron: '0 */10 * * * *' # default value is '0 */10 * * * *' (every 10 minutes)
+  transfer-method: 'copy' # default value is 'copy'
+  destination-folder: 'drive-name:/destination/folder' # mandatory
   exclude-patterns:
-    - '*.index'
-  ignore-existing: true
+    - '*.index' # List of patterns to exclude from sync
+  ignore-existing: true # Ignore sync if destination file exists
 
 storage:
-  video-duration: 5m
-  file-mover-interval: 5m
-  tmp-folder: '/tmp'
-  records-folder: '/records'
-  max-records-size: 10G
+  max-records-folder-size: 20GB # default value is 10GB
+  file-mover-interval: 5m # default value is 5 minutes
+  tmp-folder: '/app/data/tmp' # default value is '/app/data/tmp' (container tmp folder)
+  records-folder: '/app/data/records' # default value is '/app/data/records' (container records folder)
 
 rtsp:
-    cameras:
-        - name: back-door'
-          host: '<host>'
-          port: 554
-          format: '<camera format>'
-          protocol: '<udp or tcp accordingly with your camera requirements>'
-          username: '<username>'
-          password: '<password>'
-        - name: hallway
-          url: 'rtsp://<username>:<password>@<host>:<port>/<path>'
-          protocol: '<udp or tcp accordingly with your camera requirements>'
-
+  timeout: 30s # default value is 30 seconds
+  video-duration: 5m # default value is 5 minutes
+  transport-protocol: 'udp' # default value is 'tcp'
+  cameras: # mandatory. List of cameras to record
+    - name: 'porta'
+      host: '192.168.0.1'
+      port: 554
+      format: 'onvif1'
+      username: 'admin'
+      password: 'password'
+    - name: 'varanda'
+      host: '192.168.0.2'
+      port: 554
+      format: 'onvif1'
+      username: 'admin'
+      password: 'password'
+    - name: 'corredor'
+      url: 'rtsp://admin:password@192.168.0.3:554/onvif1' # if camera is configured with URL all other fields are ignored
