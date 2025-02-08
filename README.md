@@ -2,7 +2,7 @@
 
 ## docker-compose.yaml
 
-run `mkdir -p java-rtsp-recorder/data/{tmp,records} && java-rtsp-recorder/config` before running docker compose.
+run `mkdir -p java-rtsp-recorder/{config,data/{tmp,records}}` before running docker compose.
 
 `rclone.conf` and `config.yaml` must be placed in `java-rtsp-recorder/config` folder.
 
