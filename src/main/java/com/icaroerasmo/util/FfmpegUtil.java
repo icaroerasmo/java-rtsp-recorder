@@ -86,11 +86,15 @@ public class FfmpegUtil {
 
                 final String fileRecord = fileList.get(index++);
 
-                String[] file = fileRecord.split(",");
-                Path filePath = Paths.get(file[0]);
-                sum += Long.parseLong(file[1]);
-
-                filesToDelete.add(filePath);
+                try {
+                    String[] file = fileRecord.split(",");
+                    Path filePath = Paths.get(file[0]);
+                    sum += Long.parseLong(file[1]);
+                    filesToDelete.add(filePath);
+                } catch (Exception e) {
+                    log.error("Error capturing file to be deleted: {}. Line: {}", e.getMessage(), fileRecord);
+                    log.debug("Error capturing file to be deleted: {}. Line: {}", e.getMessage(), fileRecord, e);
+                }
             }
 
             filesToDelete.stream().parallel().forEach(file -> {
