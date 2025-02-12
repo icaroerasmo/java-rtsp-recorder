@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -118,12 +119,18 @@ public class FfmpegService {
         Future<Void> future = executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()));
         futureStorage.put(entry.getKey(), "main", future);
 
-        Thread.sleep(1000);
-
-        if(future.state().equals(Future.State.RUNNING)) {
-            log.info("Camera {} started.", entry.getKey());
-            telegramUtil.sendMessage(MessagesEnum.CAM_STARTED, entry.getKey());
-        }
+        executorService.submit(() -> {
+            try {
+                Thread.sleep(1000);
+                if(future.state().equals(Future.State.RUNNING)) {
+                    log.info("Camera {} started.", entry.getKey());
+                    telegramUtil.sendMessage(MessagesEnum.CAM_STARTED, entry.getKey());
+                }
+            } catch (Exception e) {
+                log.error("Error checking if camera {} started: {}", entry.getKey(), e.getMessage());
+                log.debug("Error checking if camera {} started: {}", entry.getKey(), e.getMessage(), e);
+            }
+        });
 
         return future;
     }

@@ -1,7 +1,9 @@
 package com.icaroerasmo.runners;
 
+import com.icaroerasmo.enums.MessagesEnum;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.util.TelegramUtil;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -26,6 +28,7 @@ public class FfmpegRunner {
 
     private final ExecutorService executorService;
     private final FutureStorage futureStorage;
+    private final TelegramUtil telegramUtil;
 
     @SneakyThrows
     public Void run(String camName, String command) {
@@ -86,6 +89,7 @@ public class FfmpegRunner {
                         throw new RuntimeException("Cam " + camName + ": ffmpeg execution failed with exit code " + exitCode);
                     }
                 } catch (InterruptedException e) {
+                    telegramUtil.sendMessage(MessagesEnum.CAM_STOPPED, camName);
                     log.warn("Cam {}: Interrupted.", camName);
                     Thread.currentThread().interrupt();
                     break;
