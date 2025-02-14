@@ -87,6 +87,7 @@ public class FfmpegCommandParser implements CommandParser {
 
             List<String> command = new ArrayList<>();
             command.add("ffmpeg");
+            command.add("-nostdin");
             command.add("-rtsp_transport");
             command.add(ffmpegCommandParser.getTransportProtocol());
             command.add("-i");
