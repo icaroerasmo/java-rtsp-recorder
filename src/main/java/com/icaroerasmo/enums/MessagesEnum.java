@@ -21,8 +21,12 @@ public enum MessagesEnum {
     RCLONE_SYNC_START("Synchronization started in %s."),
     CAM_CHECKER_NOT_RUNNING("Camera \"%s\" is not running. Trying to recover..."),
     CAM_CHECKER_RECOVERED("Camera \"%s\" has been recovered."),
-    CAM_STARTED("Camera \"%s\" is running."),
-    CAM_STOPPED("Camera \"%s\" stopped."),;
+    CAM_INITIATING("Initiating camera \"%s\"..."),
+    CAM_STARTED("Camera \"%s\" started."),
+    CAM_STOPPED("Camera \"%s\" stopped."),
+    CAM_ATTEMPT_FAILED("Camera \"%s\" failed to start. Attempt number %s."),
+    CAM_MAX_ATTEMPTS_REACHED("Camera \"%s\" failed to start. Maximum number of %s attempts reached."),
+    CAM_TRYING_TO_RUN_AFTER_HIBERNATION("Trying to run camera \"%s\" after hibernation.");
 
     private final String message;
 }

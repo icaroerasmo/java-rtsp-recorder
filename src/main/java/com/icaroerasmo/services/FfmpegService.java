@@ -5,15 +5,11 @@ import com.icaroerasmo.parsers.FfmpegCommandParser;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
-import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
-import com.icaroerasmo.runners.TranslateShellRunner;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.FfmpegUtil;
 import com.icaroerasmo.util.PropertiesUtil;
 import com.icaroerasmo.util.TelegramUtil;
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.request.SendMessage;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +21,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -99,7 +94,7 @@ public class FfmpegService {
         executorService.shutdownNow();
     }
 
-    private Map.Entry<String, String> parseCamInfo(RtspProperties.Camera camera) {
+    private Map.Entry<String, FfmpegCommandParser.FfmpegCommandParserBuilder> parseCamInfo(RtspProperties.Camera camera) {
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         return Map.entry(camera.getName(),
@@ -110,12 +105,12 @@ public class FfmpegService {
                         url(propertiesUtil.cameraUrlParser(camera)).
                         doneSegmentsListSize(20).
                         tmpPath(storageProperties.getTmpFolder()).
-                        videoDuration(rtspProperties.getVideoDuration()).build()
+                        videoDuration(rtspProperties.getVideoDuration())
         );
     }
 
     @SneakyThrows
-    private Future<Void> ffmpegFutureSubmitter(Map.Entry<String, String> entry) {
+    private Future<Void> ffmpegFutureSubmitter(Map.Entry<String, FfmpegCommandParser.FfmpegCommandParserBuilder> entry) {
         Future<Void> future = executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()));
         futureStorage.put(entry.getKey(), "main", future);
 
@@ -124,7 +119,7 @@ public class FfmpegService {
                 Thread.sleep(1000);
                 if(future.state().equals(Future.State.RUNNING)) {
                     log.info("Camera {} started.", entry.getKey());
-                    telegramUtil.sendMessage(MessagesEnum.CAM_STARTED, entry.getKey());
+                    telegramUtil.sendMessage(MessagesEnum.CAM_INITIATING, entry.getKey());
                 }
             } catch (Exception e) {
                 log.error("Error checking if camera {} started: {}", entry.getKey(), e.getMessage());

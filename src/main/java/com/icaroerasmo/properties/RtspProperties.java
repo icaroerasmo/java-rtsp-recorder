@@ -12,7 +12,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "rtsp")
 public class RtspProperties implements ConfigYaml {
 
-    private String timeout = "30s";
+    private String timeout = "5s";
     private String videoDuration = "5m";
     private TransportProtocol transportProtocol = TransportProtocol.TCP;
     private List<Camera> cameras;

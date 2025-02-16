@@ -1,7 +1,7 @@
 package com.icaroerasmo.runners;
 
 import com.icaroerasmo.enums.MessagesEnum;
-import com.icaroerasmo.properties.JavaRtspProperties;
+import com.icaroerasmo.parsers.FfmpegCommandParser;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.TelegramUtil;
 import lombok.Getter;
@@ -13,12 +13,8 @@ import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 @Log4j2
 @Getter
@@ -31,9 +27,9 @@ public class FfmpegRunner {
     private final TelegramUtil telegramUtil;
 
     @SneakyThrows
-    public Void run(String camName, String command) {
+    public Void run(String camName, FfmpegCommandParser.FfmpegCommandParserBuilder command) {
 
-        log.info("Cam {}: Running command: {}", camName, command);
+        log.info("Cam {}: Running command: {}", camName, command.build());
 
         final int maxRetries = 3;
         int attempt = 0;
@@ -44,7 +40,7 @@ public class FfmpegRunner {
                 Future<Void> outputLogsFuture = null;
                 Future<Void> errorLogsFuture = null;
                 try {
-                    process = new ProcessBuilder(command.split(" ")).start();
+                    process = new ProcessBuilder(command.buildAsList()).start();
 
                     Process finalProcess = process;
 
@@ -75,15 +71,12 @@ public class FfmpegRunner {
                     futureStorage.put(camName, "outputLogsFuture", outputLogsFuture);
                     futureStorage.put(camName, "errorLogsFuture", errorLogsFuture);
 
-                    Thread.sleep(1000); // Wait for threads to finish reading output before checking
-
-                    if (process.isAlive()) {
-                        attempt = 0;
-                    }
+                    telegramUtil.sendMessage(MessagesEnum.CAM_STARTED, camName);
 
                     int exitCode = process.waitFor();
 
                     if (exitCode == 0) {
+                        attempt = 0;
                         success = true;
                     } else {
                         throw new RuntimeException("Cam " + camName + ": ffmpeg execution failed with exit code " + exitCode);
@@ -94,7 +87,9 @@ public class FfmpegRunner {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
-                    log.warn("Cam {}: Attempt {} failed.", camName, attempt + 1, e);
+                    int attemptNo = attempt + 1;
+                    log.warn("Cam {}: Starting attempt number {} failed.", camName, attemptNo, e);
+                    telegramUtil.sendMessage(MessagesEnum.CAM_ATTEMPT_FAILED, camName, attemptNo);
                 } finally {
                     if (process != null) {
                         process.destroy();
@@ -104,9 +99,13 @@ public class FfmpegRunner {
                 attempt++;
 
                 if (!success && attempt >= maxRetries) {
+                    //TODO notify in telegram that ffmpeg start tries reached maximum value and it'll hibernate for 5 minutes
                     attempt = 0;
                     log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in 5 minutes...", camName);
+                    telegramUtil.sendMessage(MessagesEnum.CAM_MAX_ATTEMPTS_REACHED, camName, maxRetries);
                     Thread.sleep(300000);
+                    log.info("Cam {}: Trying to run again after hibernation.", camName);
+                    telegramUtil.sendMessage(MessagesEnum.CAM_TRYING_TO_RUN_AFTER_HIBERNATION, camName);
                 }
             }
         return null;
