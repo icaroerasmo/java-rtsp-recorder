@@ -41,4 +41,12 @@ public class FutureStorage {
         threads.get(name).clear();
         threads.remove(name);
     }
+
+    public boolean isRunning(String name) {
+        return isRunning(name, "main");
+    }
+
+    public boolean isRunning(String name, String threadName) {
+        return threads.get(name).get(threadName).state().equals(Future.State.RUNNING);
+    }
 }

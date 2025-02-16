@@ -87,17 +87,19 @@ public class FfmpegCommandParser implements CommandParser {
 
             List<String> command = new ArrayList<>();
             command.add("ffmpeg");
+            command.add("-nostdin");
             command.add("-rtsp_transport");
             command.add(ffmpegCommandParser.getTransportProtocol());
+
+            if (ffmpegCommandParser.getTimeout() != null) {
+                command.add("-timeout");
+                command.add(String.valueOf(propertiesUtil.durationParser(ffmpegCommandParser.getTimeout(), TimeUnit.MICROSECONDS)));
+            }
+
             command.add("-i");
             command.add(ffmpegCommandParser.getUrl());
             command.add("-c");
             command.add("copy");
-
-            if (ffmpegCommandParser.getTimeout() != null) {
-                command.add("-rw_timeout");
-                command.add(String.valueOf(propertiesUtil.durationParser(ffmpegCommandParser.getTimeout(), TimeUnit.MILLISECONDS)));
-            }
 
             if (ffmpegCommandParser.getDoneSegmentsListSize() != null && ffmpegCommandParser.getVideoDuration() != null) {
                 command.add("-f");
