@@ -33,6 +33,7 @@ public class CamCheckerScheduledTask {
             // Check if camera is online
             // If camera is online, do nothing
             // If camera is offline, send a message to Telegram
+          
             if(!futureStorage.isRunning(camera.getName())) {
                 // Send message to Telegram
                 telegramUtil.sendMessage(MessagesEnum.CAM_CHECKER_NOT_RUNNING, camera.getName());

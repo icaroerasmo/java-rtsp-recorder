@@ -8,7 +8,6 @@ import com.pengrad.telegrambot.request.SendMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
-
 import java.util.stream.Stream;
 
 @Log4j2

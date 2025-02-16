@@ -28,5 +28,6 @@ public enum MessagesEnum {
     CAM_MAX_ATTEMPTS_REACHED("Camera \"%s\" failed to start. Maximum number of %s attempts reached."),
     CAM_TRYING_TO_RUN_AFTER_HIBERNATION("Trying to run camera \"%s\" after hibernation.");
 
+
     private final String message;
 }
