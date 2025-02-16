@@ -71,6 +71,7 @@ public class FfmpegRunner {
                     futureStorage.put(camName, "outputLogsFuture", outputLogsFuture);
                     futureStorage.put(camName, "errorLogsFuture", errorLogsFuture);
 
+                    log.info("Cam {}: ffmpeg started.", camName);
                     telegramUtil.sendMessage(MessagesEnum.CAM_STARTED, camName);
 
                     int exitCode = process.waitFor();
