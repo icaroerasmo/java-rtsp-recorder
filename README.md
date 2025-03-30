@@ -65,16 +65,17 @@ storage:
 rtsp:
   timeout: 30s # default value is 30 seconds
   video-duration: 5m # default value is 5 minutes
-  transport-protocol: 'udp' # default value is 'tcp'
   cameras: # mandatory. List of cameras to record
     - name: 'hallway'
       host: '192.168.0.1'
+      protocol: 'udp' # default value is 'tcp'
       port: 554
       format: 'onvif1'
       username: 'admin'
       password: 'password'
     - name: 'front-door'
       host: '192.168.0.2'
+      protocol: 'udp' # default value is 'tcp'
       port: 554
       format: 'onvif1'
       username: 'admin'

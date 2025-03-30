@@ -101,11 +101,11 @@ public class FfmpegService {
         return Map.entry(camera.getName(),
                 FfmpegCommandParser.builder().
                         cameraName(camera.getName()).
-                        timeout(rtspProperties.getTimeout()).
-                        transportProtocol(rtspProperties.getTransportProtocol()).
+                        transportProtocol(camera.getProtocol()).
                         url(propertiesUtil.cameraUrlParser(camera)).
                         doneSegmentsListSize(20).
                         tmpPath(storageProperties.getTmpFolder()).
+                        timeout(rtspProperties.getTimeout()).
                         videoDuration(rtspProperties.getVideoDuration())
         );
     }
