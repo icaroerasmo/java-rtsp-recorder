@@ -205,7 +205,9 @@ public class FfmpegUtil {
                                 resolve(indexFile.getName(
                                         indexFile.getNameCount()-1)+".tmp");
 
-                        Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
+                        if(indexFile.toFile().exists()) {
+                            Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
+                        }
 
                         // Write new file name to index file
                         Files.write(tmpFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
