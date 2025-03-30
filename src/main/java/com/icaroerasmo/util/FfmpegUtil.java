@@ -9,10 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
@@ -157,7 +154,8 @@ public class FfmpegUtil {
                 final Map<String, String> dateMap = extractInfoFromFileName(fileName);
                 final Path destinationFolder =
                         Paths.get(recordsFolder.toString(), dateMap.get("year"),
-                                dateMap.get("month"), dateMap.get("day"), dateMap.get("hour"), dateMap.get("camName"));
+                                dateMap.get("month"), dateMap.get("day"),
+                                dateMap.get("hour"), dateMap.get("camName"));
                 final Path destinationPath = destinationFolder.resolve(fileName);
 
                 if(!Files.exists(destinationFolder)) {
@@ -202,7 +200,18 @@ public class FfmpegUtil {
 
                         indexFileLock.lock();
 
-                        Files.write(indexFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                        // Creates copy of orifinal index file
+                        final Path tmpFile = indexFile.getParent().
+                                resolve(indexFile.getName(
+                                        indexFile.getNameCount()-1)+".tmp");
+
+                        Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
+
+                        // Write new file name to index file
+                        Files.write(tmpFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+                        // Replace original index file with new one
+                        Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
 
                     } catch (Exception e) {
                         log.error("Error moving file: {}", e.getMessage(), e);
