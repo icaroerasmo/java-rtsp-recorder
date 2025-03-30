@@ -101,32 +101,23 @@ public class FfmpegService {
         return Map.entry(camera.getName(),
                 FfmpegCommandParser.builder().
                         cameraName(camera.getName()).
-                        timeout(rtspProperties.getTimeout()).
-                        transportProtocol(rtspProperties.getTransportProtocol()).
+                        transportProtocol(camera.getProtocol()).
                         url(propertiesUtil.cameraUrlParser(camera)).
                         doneSegmentsListSize(20).
                         tmpPath(storageProperties.getTmpFolder()).
+                        timeout(rtspProperties.getTimeout()).
                         videoDuration(rtspProperties.getVideoDuration())
         );
     }
 
     @SneakyThrows
     private Future<Void> ffmpegFutureSubmitter(Map.Entry<String, FfmpegCommandParser.FfmpegCommandParserBuilder> entry) {
+
+        log.info("Camera {} initiating...", entry.getKey());
+        telegramUtil.sendMessage(MessagesEnum.CAM_INITIATING, entry.getKey());
+
         Future<Void> future = executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()));
         futureStorage.put(entry.getKey(), "main", future);
-
-        executorService.submit(() -> {
-            try {
-                Thread.sleep(1000);
-                if(future.state().equals(Future.State.RUNNING)) {
-                    log.info("Camera {} started.", entry.getKey());
-                    telegramUtil.sendMessage(MessagesEnum.CAM_INITIATING, entry.getKey());
-                }
-            } catch (Exception e) {
-                log.error("Error checking if camera {} started: {}", entry.getKey(), e.getMessage());
-                log.debug("Error checking if camera {} started: {}", entry.getKey(), e.getMessage(), e);
-            }
-        });
 
         return future;
     }

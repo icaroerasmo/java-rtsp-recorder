@@ -14,7 +14,6 @@ public class RtspProperties implements ConfigYaml {
 
     private String timeout = "5s";
     private String videoDuration = "5m";
-    private TransportProtocol transportProtocol = TransportProtocol.TCP;
     private List<Camera> cameras;
 
     @Data
@@ -22,6 +21,7 @@ public class RtspProperties implements ConfigYaml {
         private String url;
         private String name;
         private String host;
+        private TransportProtocol protocol = TransportProtocol.TCP;
         private String port;
         private String format;
         private String username;
