@@ -21,28 +21,41 @@ public class PropertiesUtil {
 
         return "rtsp://" + camera.getUsername()  + ":" + camera.getPassword() + "@" + camera.getHost() + ":" + camera.getPort() + "/"+camera.getFormat();
     }
+
     public String durationParser(String duration, TimeUnit timeUnit) {
-        Pattern pattern = Pattern.compile("(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?");
+        Pattern pattern = Pattern.compile("(?:(\\d+)d)?(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?(?:(\\d+)mm)?");
         Matcher matcher = pattern.matcher(duration);
-        long milliseconds = 0;
+        long millisecondsBuff = 0;
 
         if (matcher.matches()) {
-            String hours = matcher.group(1);
-            String minutes = matcher.group(2);
-            String seconds = matcher.group(3);
+            String days = matcher.group(1);
+            String hours = matcher.group(2);
+            String minutes = matcher.group(3);
+            String seconds = matcher.group(4);
+            String milliseconds = matcher.group(5);
 
+            if (days != null) {
+                millisecondsBuff += Long.parseLong(days) * 86400000;
+            }
             if (hours != null) {
-                milliseconds += Long.parseLong(hours) * 3600000;
+                millisecondsBuff += Long.parseLong(hours) * 3600000;
             }
             if (minutes != null) {
-                milliseconds += Long.parseLong(minutes) * 60000;
+                millisecondsBuff += Long.parseLong(minutes) * 60000;
             }
             if (seconds != null) {
-                milliseconds += Long.parseLong(seconds) * 1000;
+                millisecondsBuff += Long.parseLong(seconds) * 1000;
+            }
+            if (milliseconds != null) {
+                millisecondsBuff += Long.parseLong(milliseconds);
             }
         }
 
-        return String.valueOf(timeUnit.convert(milliseconds, TimeUnit.MILLISECONDS));
+        return String.valueOf(convertToUnit(timeUnit, millisecondsBuff));
+    }
+
+    public long convertToUnit(TimeUnit timeUnit, long millisecondsBuff) {
+        return timeUnit.convert(millisecondsBuff, TimeUnit.MILLISECONDS);
     }
 
     public long storageUnitConverter(String val, String targetUnit) {

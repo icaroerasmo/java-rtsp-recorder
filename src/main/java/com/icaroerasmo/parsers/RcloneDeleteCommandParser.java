@@ -10,6 +10,7 @@ public class RcloneDeleteCommandParser implements CommandParser {
 
     private String configLocation;
     private String folder;
+    private String maxAgeVideoFiles;
 
     public static RcloneDeleteCommandParser.RcloneDeleteCommandParserBuilder builder() {
         return new RcloneDeleteCommandParser.RcloneDeleteCommandParserBuilder();
@@ -33,6 +34,11 @@ public class RcloneDeleteCommandParser implements CommandParser {
             return this;
         }
 
+        public RcloneDeleteCommandParserBuilder maxAgeVideoFiles(String maxAgeVideoFiles) {
+            rcloneDeleteCommandParser.setMaxAgeVideoFiles(maxAgeVideoFiles);
+            return this;
+        }
+
         @Override
         public List<String> buildAsList() {
 
@@ -43,7 +49,7 @@ public class RcloneDeleteCommandParser implements CommandParser {
             command.add("delete");
             command.add(rcloneDeleteCommandParser.getFolder());
             command.add("--min-age");
-            command.add("20d");
+            command.add(rcloneDeleteCommandParser.getMaxAgeVideoFiles());
 
             return command;
         }
