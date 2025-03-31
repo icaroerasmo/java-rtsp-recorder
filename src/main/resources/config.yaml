@@ -19,7 +19,9 @@ rclone:
   ignore-existing: true # Ignore sync if destination file exists
 
 storage:
+  delete-old-files-cron: '0 30 1 * * *' # default value is '0 20 0 * * *' (30 minutes past midnight)
   max-records-folder-size: 20GB # default value is 10GB
+  max-age-video-files: 20d # default value is 20 days
   file-mover-interval: 5m # default value is 5 minutes
   tmp-folder: '/app/data/tmp' # default value is '/app/data/tmp' (container tmp folder)
   records-folder: '/app/data/records' # default value is '/app/data/records' (container records folder)

@@ -2,6 +2,7 @@ package com.icaroerasmo.runners;
 
 import com.icaroerasmo.parsers.RcloneDeleteCommandParser;
 import com.icaroerasmo.properties.RcloneProperties;
+import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
 import com.pengrad.telegrambot.TelegramBot;
@@ -15,6 +16,7 @@ import java.util.concurrent.ExecutorService;
 @Component
 public class RcloneDeleteRunner extends RcloneRunner {
 
+    private final StorageProperties storageProperties;
     private final RcloneProperties rcloneProperties;
 
     @Autowired
@@ -24,8 +26,9 @@ public class RcloneDeleteRunner extends RcloneRunner {
             RcloneProperties rcloneProperties,
             TelegramProperties telegramProperties,
             TelegramBot telegram,
-            TranslateShellRunner translateShellRunner) {
+            TranslateShellRunner translateShellRunner, StorageProperties storageProperties) {
         super(executorService, futureStorage, telegramProperties, telegram, translateShellRunner);
+        this.storageProperties = storageProperties;
         this.rcloneProperties = rcloneProperties;
     }
 
@@ -33,6 +36,7 @@ public class RcloneDeleteRunner extends RcloneRunner {
         log.info("Running rclone");
 
         final RcloneDeleteCommandParser.RcloneDeleteCommandParserBuilder command = RcloneDeleteCommandParser.builder()
+                .maxAgeVideoFiles(storageProperties.getMaxAgeVideoFiles())
                 .configLocation(rcloneProperties.getConfigLocation())
                 .folder(rcloneProperties.getDestinationFolder());
 
