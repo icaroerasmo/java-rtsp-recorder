@@ -100,7 +100,6 @@ public class FfmpegRunner {
                 attempt++;
 
                 if (!success && attempt >= maxRetries) {
-                    //TODO notify in telegram that ffmpeg start tries reached maximum value and it'll hibernate for 5 minutes
                     attempt = 0;
                     log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in 5 minutes...", camName);
                     telegramUtil.sendMessage(MessagesEnum.CAM_MAX_ATTEMPTS_REACHED, camName, maxRetries);

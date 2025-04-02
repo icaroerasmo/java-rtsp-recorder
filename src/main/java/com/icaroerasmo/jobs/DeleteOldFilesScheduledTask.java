@@ -2,9 +2,9 @@ package com.icaroerasmo.jobs;
 
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.util.PropertiesUtil;
+import com.icaroerasmo.util.Utilities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -13,10 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 @Log4j2
@@ -26,13 +24,14 @@ public class DeleteOldFilesScheduledTask {
 
     private final PropertiesUtil propertiesUtil;
     private final StorageProperties storageProperties;
+    private final Utilities utilities;
 
     @Scheduled(cron = "#{@storageProperties.deleteOldFilesCron}")
     private void rcloneDedupe() throws IOException {
-        log.info("Started deleting files older than {} days", getDays());
+        log.info("Started deleting files older than {}", utilities.getFullTimeAmount(getTimeInMillis()));
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
         folderDeleter(recordsFolder);
-        log.info("Finished deleting files older than {} days", getDays());
+        log.info("Finished deleting files older than {}", utilities.getFullTimeAmount(getTimeInMillis()));
     }
 
     private void deleteOldFiles(Path path) throws IOException {
@@ -76,14 +75,10 @@ public class DeleteOldFilesScheduledTask {
     private boolean isOlderThanMaxAge(BasicFileAttributes attrs) {
         return Objects.nonNull(attrs) &&
                 attrs.creationTime().toMillis() <
-                        System.currentTimeMillis() - getDaysInMillis();
+                        System.currentTimeMillis() - getTimeInMillis();
     }
 
-    private Integer getDays(){
-        return Math.toIntExact(propertiesUtil.convertToUnit(TimeUnit.DAYS, getDaysInMillis()));
-    }
-
-    private Long getDaysInMillis() {
+    private Long getTimeInMillis() {
         return Long.parseLong(propertiesUtil.durationParser(
                 storageProperties.getMaxAgeVideoFiles(), TimeUnit.MILLISECONDS));
     }
