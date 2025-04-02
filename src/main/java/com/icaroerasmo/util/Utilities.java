@@ -10,26 +10,21 @@ import org.springframework.stereotype.Component;
 public class Utilities {
     public String getFullTimeAmount(long millis) {
 
-        long days = 0, hours = 0, minutes = 0, seconds = 0, milliseconds = 0;
+        final int oneDay = 86400000, oneHour = 3600000, oneMinute = 60000, oneSecond = 1000;
 
-        while(millis > 0) {
-            if(millis > 86400000) {
-                days++;
-                millis -= 86400000;
-            } else if(millis > 3600000) {
-                hours++;
-                millis -= 3600000;
-            } else if(millis > 60000) {
-                minutes++;
-                millis -= 60000;
-            } else if(millis > 1000) {
-                seconds++;
-                seconds -= 1000;
-            } else {
-                milliseconds = millis;
-                millis = 0;
-            }
-        }
+        long days = millis / oneDay;
+        millis %= oneDay;
+
+        long hours = millis / oneHour;
+        millis %= oneHour;
+
+        long minutes = millis / oneMinute;
+        millis %= oneMinute;
+
+        long seconds = millis / oneSecond;
+        millis %= oneSecond;
+
+        long milliseconds = millis;
 
         String strTime = "";
 
