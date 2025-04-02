@@ -30,7 +30,7 @@ public class BeansAndConfig {
 
     @Bean
     public ExecutorService executorService(RtspProperties rtspProperties) {
-        return Executors.newFixedThreadPool((rtspProperties.getCameras().size()*3)+16);
+        return Executors.newCachedThreadPool();
     }
 
     @Bean
