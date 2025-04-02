@@ -47,8 +47,8 @@ telegram:
 rclone:
   config-location: '/app/config/rclone.conf' # default value is '/app/config/rclone.conf'
   delete-cron: '0 0 1 * * *' # default value is '0 0 0 * * *' (midnight)
-  rmdirs-cron: '0 10 1 * * *' # default value is '0 10 0 * * *' (10 minutes past midnight)
-  dedupe-cron: '0 20 1 * * *' # default value is '0 20 0 * * *' (20 minutes past midnight)
+  rmdirs-cron: '0 10 1 * * *' # default value is '0 10 0 * * *' (10 minutes past 1am)
+  dedupe-cron: '0 20 1 * * *' # default value is '0 20 0 * * *' (20 minutes past 1am)
   sync-cron: '0 */10 * * * *' # default value is '0 */10 * * * *' (every 10 minutes)
   transfer-method: 'copy' # default value is 'copy'
   destination-folder: 'drive-name:/destination/folder' # mandatory
@@ -57,7 +57,7 @@ rclone:
   ignore-existing: true # Ignore sync if destination file exists
 
 storage:
-  delete-old-files-cron: '0 30 1 * * *' # default value is '0 20 0 * * *' (30 minutes past midnight)
+  delete-old-files-cron: '0 30 1 * * *' # default value is '0 20 0 * * *' (30 minutes past 1am)
   max-records-folder-size: 20GB # default value is 10GB
   max-age-video-files: 20d # default value is 20 days
   file-mover-interval: 5m # default value is 5 minutes
