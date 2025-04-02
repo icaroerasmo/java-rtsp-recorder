@@ -36,7 +36,7 @@ public class RcloneDeleteRunner extends RcloneRunner {
         log.info("Running rclone");
 
         final RcloneDeleteCommandParser.RcloneDeleteCommandParserBuilder command = RcloneDeleteCommandParser.builder()
-                .maxAgeVideoFiles(storageProperties.getMaxAgeVideoFiles())
+                .maxAgeVideoFiles(storageProperties.getMaxAgeRemoteVideoFiles())
                 .configLocation(rcloneProperties.getConfigLocation())
                 .folder(rcloneProperties.getDestinationFolder());
 

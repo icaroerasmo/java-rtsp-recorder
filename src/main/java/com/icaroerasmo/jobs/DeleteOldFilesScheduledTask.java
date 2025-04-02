@@ -80,6 +80,6 @@ public class DeleteOldFilesScheduledTask {
 
     private Long getTimeInMillis() {
         return Long.parseLong(propertiesUtil.durationParser(
-                storageProperties.getMaxAgeVideoFiles(), TimeUnit.MILLISECONDS));
+                storageProperties.getMaxAgeLocalVideoFiles(), TimeUnit.MILLISECONDS));
     }
 }

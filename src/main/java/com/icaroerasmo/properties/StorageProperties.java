@@ -13,5 +13,6 @@ public class StorageProperties implements ConfigYaml {
     private String tmpFolder = "/app/data/tmp";
     private String recordsFolder = "/app/data/records";
     private String maxRecordsFolderSize = "10G";
-    private String maxAgeVideoFiles = "20d";
+    private String maxAgeRemoteVideoFiles = "20d";
+    private String maxAgeLocalVideoFiles = "3d";
 }
