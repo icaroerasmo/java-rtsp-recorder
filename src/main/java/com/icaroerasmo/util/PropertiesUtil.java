@@ -19,7 +19,7 @@ public class PropertiesUtil {
             return camera.getUrl();
         }
 
-        return "rtsp://" + camera.getUsername()  + ":" + camera.getPassword() + "@" + camera.getHost() + ":" + camera.getPort() + "/"+camera.getFormat();
+        return "rtsp://" + camera.getUsername()  + ":" + camera.getPassword() + "@" + camera.getHost() + ":" + camera.getPort() + "/" + camera.getFormat();
     }
 
     public String durationParser(String duration, TimeUnit timeUnit) {
