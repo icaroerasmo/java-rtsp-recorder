@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.icaroerasmo</groupId>
   <artifactId>java-rtsp-recorder</artifactId>
-  <version>0.6.0</version>
+  <version>0.6.1</version>
   <name>Java RTSP Recorder</name>
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
