@@ -117,7 +117,7 @@ public class FfmpegUtil {
             // Creates tmp file
             final Path tmpFile = generateTmpPath(indexFile);
 
-            // Write new file name to index file
+            // Write new file list to tmp file
             Files.write(tmpFile, fileList.subList(index, fileList.size()), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
             // Replace original index file with new one
