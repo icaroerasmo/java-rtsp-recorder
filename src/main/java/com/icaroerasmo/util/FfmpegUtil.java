@@ -2,12 +2,10 @@ package com.icaroerasmo.util;
 
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
-import com.icaroerasmo.runners.TranslateShellRunner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -59,8 +57,8 @@ public class FfmpegUtil {
         return dateMap;
     }
 
-    private void deleteFilesToSaveSpace(Long saveUpTo) {
-        log.info("Deleting files");
+    private void deleteFilesFromIndex(Long saveUpTo) {
+        log.info("Deleting files from index");
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
@@ -84,10 +82,12 @@ public class FfmpegUtil {
                 final String fileRecord = fileList.get(index++);
 
                 try {
-                    String[] file = fileRecord.split(",");
-                    Path filePath = Paths.get(file[0]);
-                    sum += Long.parseLong(file[1]);
+                    log.info("Capturing data from index to be deleted: {}", fileRecord);
+                    String[] fileData = fileRecord.split(",");
+                    Path filePath = Paths.get(fileData[0]);
+                    sum += Long.parseLong(fileData[1]);
                     filesToDelete.add(filePath);
+                    log.info("File deleted from index successfully: {}", filePath);
                 } catch (Exception e) {
                     log.error("Error capturing file to be deleted: {}. Line: {}", e.getMessage(), fileRecord);
                     log.debug("Error capturing file to be deleted: {}. Line: {}", e.getMessage(), fileRecord, e);
@@ -108,6 +108,8 @@ public class FfmpegUtil {
             log.error("Error deleting files: {}", e.getMessage());
             log.debug("Error deleting files: {}", e.getMessage(), e);
         }
+
+        log.info("Done deleting files from index");
     }
 
     public void deleteEmptyFolders(Path files) {
@@ -188,7 +190,7 @@ public class FfmpegUtil {
                         long probableSize = sizeOfFolder + sizeOfFile;
 
                         if(probableSize > maxFolderSizeInBytes) {
-                            deleteFilesToSaveSpace(probableSize-maxFolderSizeInBytes);
+                            deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
                         }
 
                         Files.move(originPath, destinationPath);
