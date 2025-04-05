@@ -119,8 +119,12 @@ public class FfmpegUtil {
             // Creates tmp file
             final Path tmpFile = generateTmpPath(indexFile);
 
+            if(indexFile.toFile().exists()) {
+                Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+
             // Write new file list to tmp file
-            Files.write(tmpFile, fileList.subList(index, fileList.size()), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            Files.write(tmpFile, fileList.subList(index, fileList.size()));
 
             // Replace original index file with new one
             Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
@@ -214,12 +218,12 @@ public class FfmpegUtil {
                         deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
                     }
 
-                    String csvLine = "";
+                    String indexLine = "";
 
                     try {
                         Files.move(originPath, destinationPath);
                         BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
-                        csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
+                        indexLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
                     } catch (IOException e) {
                         log.error("Error moving file: {}", e.getMessage(), e);
                         log.debug("Error moving file: {}", e.getMessage());
@@ -229,7 +233,7 @@ public class FfmpegUtil {
                     boolean success = true;
 
                     try {
-                        log.info("Writing to index file: {}", csvLine.substring(0, csvLine.length()-1));
+                        log.info("Writing to index file: {}", indexLine.substring(0, indexLine.length()-1));
 
                         indexFileLock.lock();
 
@@ -241,7 +245,7 @@ public class FfmpegUtil {
                         }
 
                         // Write new file name to index file
-                        Files.write(tmpFile, csvLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                        Files.write(tmpFile, indexLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
                         // Replace original index file with new one
                         Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
