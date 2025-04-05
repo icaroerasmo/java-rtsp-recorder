@@ -68,15 +68,18 @@ public class FfmpegUtil {
         List<String> fileList;
 
         try {
+            indexFileLock.lock();
             fileList = Files.readAllLines(indexFile);
         } catch(Exception e) {
             log.error("Error reading index file: {}", e.getMessage());
             log.debug("Error reading index file: {}", e.getMessage(), e);
+            indexFileLock.unlock();
             return;
         }
 
         if(fileList.isEmpty()) {
             log.info("Index file is empty");
+            indexFileLock.unlock();
             return;
         }
 
@@ -112,7 +115,6 @@ public class FfmpegUtil {
         });
 
         try {
-            indexFileLock.lock();
 
             // Creates tmp file
             final Path tmpFile = generateTmpPath(indexFile);
@@ -126,9 +128,9 @@ public class FfmpegUtil {
         } catch (Exception e) {
             log.error("Error rewriting files to index: {}", e.getMessage());
             log.debug("Error rewriting files to index: {}", e.getMessage(), e);
-        } finally {
-            indexFileLock.unlock();
         }
+
+        indexFileLock.unlock();
 
         log.info("Done deleting files from index");
     }
