@@ -237,7 +237,18 @@ public class FfmpegUtil {
 
                         indexFileLock.lock();
 
-                        writeToIndex(indexFile, indexLine);
+                        // Creates copy of orifinal index file
+                        final Path tmpFile = generateTmpPath(indexFile);
+
+                        if(indexFile.toFile().exists()) {
+                            Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
+                        }
+
+                        // Write new file name to index file
+                        Files.write(tmpFile, indexLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+                        // Replace original index file with new one
+                        Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
 
                     } catch (Exception e) {
                         log.error("Error writing to index file: {}", e.getMessage(), e);
@@ -256,21 +267,6 @@ public class FfmpegUtil {
             );
 
         log.info("Done moving files to records folder");
-    }
-
-    private static void writeToIndex(Path indexFile, String indexLine) throws IOException {
-        // Creates copy of orifinal index file
-        final Path tmpFile = generateTmpPath(indexFile);
-
-        if(indexFile.toFile().exists()) {
-            Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        // Write new file name to index file
-        Files.write(tmpFile, indexLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-
-        // Replace original index file with new one
-        Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
     }
 
     private static Path generateTmpPath(Path originalFile) {
