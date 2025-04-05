@@ -4,6 +4,7 @@ import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -64,49 +65,69 @@ public class FfmpegUtil {
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
         final Path indexFile = recordsFolder.resolve(".index");
 
+        List<String> fileList;
+
         try {
-            long sum = 0l;
+            fileList = Files.readAllLines(indexFile);
+        } catch(Exception e) {
+            log.error("Error reading index file: {}", e.getMessage());
+            log.debug("Error reading index file: {}", e.getMessage(), e);
+            return;
+        }
 
-            List<String> fileList = Files.readAllLines(indexFile);
+        if(fileList.isEmpty()) {
+            log.info("Index file is empty");
+            return;
+        }
 
-            List<Path> filesToDelete = new ArrayList<>();
+        int index = 0;
+        long sum = 0;
 
-            int index = 0;
+        List<Path> filesToDelete = new ArrayList<>();
 
-            while(sum <= saveUpTo && index < fileList.size()) {
+        while(sum <= saveUpTo && index < fileList.size()) {
 
-                if(fileList.isEmpty()) {
-                    break;
-                }
+            final String fileRecord = fileList.get(index++);
 
-                final String fileRecord = fileList.get(index++);
-
-                try {
-                    log.info("Capturing data from index to be deleted: {}", fileRecord);
-                    String[] fileData = fileRecord.split(",");
-                    Path filePath = Paths.get(fileData[0]);
-                    sum += Long.parseLong(fileData[1]);
-                    filesToDelete.add(filePath);
-                    log.info("File deleted from index successfully: {}", filePath);
-                } catch (Exception e) {
-                    log.error("Error capturing file to be deleted: {}. Line: {}", e.getMessage(), fileRecord);
-                    log.debug("Error capturing file to be deleted: {}. Line: {}", e.getMessage(), fileRecord, e);
-                }
+            try {
+                log.info("Capturing data from index to be deleted: {}", fileRecord);
+                String[] fileData = fileRecord.split(",");
+                Path filePath = Paths.get(fileData[0]);
+                sum += Long.parseLong(fileData[1]);
+                filesToDelete.add(filePath);
+                log.info("File deleted from index successfully: {}", filePath);
+            } catch (Exception e) {
+                log.error("Error capturing file from index to be deleted: {}. Line: {}", e.getMessage(), fileRecord);
+                log.debug("Error capturing file from index to be deleted: {}. Line: {}", e.getMessage(), fileRecord, e);
             }
+        }
 
-            filesToDelete.stream().parallel().forEach(file -> {
-                try {
-                    Files.deleteIfExists(file);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+        filesToDelete.stream().parallel().forEach(file -> {
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException e) {
+                log.error("Error deleting file from index: {}", e.getMessage());
+                log.debug("Error deleting file from index: {}", e.getMessage(), e);
+            }
+        });
 
-            Files.write(indexFile, fileList.subList(index, fileList.size()));
+        try {
+            indexFileLock.lock();
+
+            // Creates tmp file
+            final Path tmpFile = generateTmpPath(indexFile);
+
+            // Write new file name to index file
+            Files.write(tmpFile, fileList.subList(index, fileList.size()), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+            // Replace original index file with new one
+            Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
 
         } catch (Exception e) {
-            log.error("Error deleting files: {}", e.getMessage());
-            log.debug("Error deleting files: {}", e.getMessage(), e);
+            log.error("Error rewriting files to index: {}", e.getMessage());
+            log.debug("Error rewriting files to index: {}", e.getMessage(), e);
+        } finally {
+            indexFileLock.unlock();
         }
 
         log.info("Done deleting files from index");
@@ -177,35 +198,41 @@ public class FfmpegUtil {
                     final Path originPath = entry.getKey();
                     final Path destinationPath = entry.getValue();
 
+                    log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
+
+                    long maxFolderSizeInBytes =
+                            propertiesUtil.storageUnitConverter(
+                                    storageProperties.getMaxRecordsFolderSize(), "B");
+
+                    long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
+                    long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
+                    long probableSize = sizeOfFolder + sizeOfFile;
+
+                    if(probableSize > maxFolderSizeInBytes) {
+                        deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
+                    }
+
+                    String csvLine = "";
+
                     try {
-
-                        log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
-
-                        long maxFolderSizeInBytes =
-                                propertiesUtil.storageUnitConverter(
-                                        storageProperties.getMaxRecordsFolderSize(), "B");
-
-                        long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
-                        long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
-                        long probableSize = sizeOfFolder + sizeOfFile;
-
-                        if(probableSize > maxFolderSizeInBytes) {
-                            deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
-                        }
-
                         Files.move(originPath, destinationPath);
-
                         BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
+                        csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
+                    } catch (IOException e) {
+                        log.error("Error moving file: {}", e.getMessage(), e);
+                        log.debug("Error moving file: {}", e.getMessage());
+                        return;
+                    }
 
-                        String csvLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
+                    boolean success = true;
+
+                    try {
                         log.info("Writing to index file: {}", csvLine.substring(0, csvLine.length()-1));
 
                         indexFileLock.lock();
 
                         // Creates copy of orifinal index file
-                        final Path tmpFile = indexFile.getParent().
-                                resolve(indexFile.getName(
-                                        indexFile.getNameCount()-1)+".tmp");
+                        final Path tmpFile = generateTmpPath(indexFile);
 
                         if(indexFile.toFile().exists()) {
                             Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
@@ -218,17 +245,27 @@ public class FfmpegUtil {
                         Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
 
                     } catch (Exception e) {
-                        log.error("Error moving file: {}", e.getMessage(), e);
-                        log.debug("Error moving file: {}", e.getMessage());
-                        return;
+                        log.error("Error writing to index file: {}", e.getMessage(), e);
+                        log.debug("Error writing to index file: {}", e.getMessage());
+                        success = false;
                     } finally {
                         indexFileLock.unlock();
                     }
 
-                    log.info("File {} moved successfully.", entry.getKey());
+                    if(success) {
+                        log.info("File {} moved successfully.", entry.getKey());
+                    } else {
+                        log.error("Error when trying to move file: {}.", entry.getKey());
+                    }
                 }
             );
 
         log.info("Done moving files to records folder");
+    }
+
+    private static Path generateTmpPath(Path originalFile) {
+        return originalFile.getParent().
+                resolve(originalFile.getName(
+                        originalFile.getNameCount() - 1) + ".tmp");
     }
 }
