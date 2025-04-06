@@ -261,7 +261,7 @@ public class FfmpegUtil {
                 }
                 return Map.entry(originPath, destinationPath);
             }).
-            forEach(
+            forEachOrdered(
                 entry -> {
 
                     final Path originPath = entry.getKey();
