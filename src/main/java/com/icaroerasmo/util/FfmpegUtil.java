@@ -36,7 +36,7 @@ public class FfmpegUtil {
 
         Map<String, String> dateMap = new HashMap<>();
 
-        String regex = "(.+)(\\d{4})-(\\d{2})-(\\d{2})_(\\d{2})-\\d{2}-\\d{2}\\.mkv";
+        String regex = "(.+)(\\d{4})-(\\d{2})-(\\d{2})_(\\d{2})-(\\d{2})-(\\d{2})\\.mkv";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);
 
@@ -46,6 +46,8 @@ public class FfmpegUtil {
             int month = Integer.parseInt(matcher.group(3));
             int day = Integer.parseInt(matcher.group(4));
             int hour = Integer.parseInt(matcher.group(5));
+            int minute = Integer.parseInt(matcher.group(6));
+            int second = Integer.parseInt(matcher.group(7));
 
             LocalDate date = LocalDate.of(year, month, day);
             String monthName = date.getMonth().getDisplayName(TextStyle.FULL, Locale.getDefault());
@@ -55,6 +57,8 @@ public class FfmpegUtil {
             dateMap.put("month", monthName);
             dateMap.put("day", String.valueOf(day));
             dateMap.put("hour", String.valueOf(hour));
+            dateMap.put("minute", String.valueOf(minute));
+            dateMap.put("second", String.valueOf(second));
         } else {
             throw new IllegalArgumentException("Input string does not match the expected pattern.");
         }
@@ -181,6 +185,55 @@ public class FfmpegUtil {
         fileNames.parallelStream().
             map(fileName -> Map.entry(fileName, tmpFolder.resolve(fileName))).
             filter(entry -> Files.exists(entry.getValue())).
+            sorted((entry1, entry2) -> {
+
+                final Map<String, String> info1 = extractInfoFromFileName(entry1.getKey());
+                final Map<String, String> info2 = extractInfoFromFileName(entry2.getKey());
+
+                int year1 = Integer.parseInt(info1.get("year"));
+                int year2 = Integer.parseInt(info2.get("year"));
+
+                if(year1 != year2) {
+                    return Integer.compare(year1, year2);
+                }
+
+                int month1 = Integer.parseInt(info1.get("month"));
+                int month2 = Integer.parseInt(info2.get("month"));
+
+                if(month1 != month2) {
+                    return Integer.compare(month1, month2);
+                }
+
+                int day1 = Integer.parseInt(info1.get("day"));
+                int day2 = Integer.parseInt(info2.get("day"));
+
+                if(day1 != day2) {
+                    return Integer.compare(day1, day2);
+                }
+
+                int hour1 = Integer.parseInt(info1.get("hour"));
+                int hour2 = Integer.parseInt(info2.get("hour"));
+
+                if(hour1 != hour2) {
+                    return Integer.compare(hour1, hour2);
+                }
+
+                int minute1 = Integer.parseInt(info1.get("minute"));
+                int minute2 = Integer.parseInt(info2.get("minute"));
+
+                if(minute1 != minute2) {
+                    return Integer.compare(minute1, minute2);
+                }
+
+                int second1 = Integer.parseInt(info1.get("second"));
+                int second2 = Integer.parseInt(info2.get("second"));
+
+                if(second1 != second2) {
+                    return Integer.compare(second1, second2);
+                }
+
+                return entry1.getKey().compareTo(entry2.getKey());
+            }).
             map(entry -> {
                 final String fileName = entry.getKey();
                 final Path originPath = entry.getValue();
