@@ -3,7 +3,6 @@ package com.icaroerasmo.jobs;
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.util.FfmpegUtil;
 import com.icaroerasmo.util.PropertiesUtil;
-import com.icaroerasmo.util.Utilities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,7 +18,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
@@ -35,7 +33,18 @@ public class DeleteOldFilesScheduledTask {
     private final StorageProperties storageProperties;
 
     @Scheduled(cron = "#{@storageProperties.deleteOldFilesCron}")
-    private void rcloneDedupe() throws IOException {
+    private void oldFilesDeleter() throws IOException {
+
+        if(!getIndexPath().toFile().exists()) {
+            log.info("Index file does not exist, skipping old files deletion.");
+            return;
+        }
+
+        if(Files.readAllLines(getIndexPath()).isEmpty()) {
+            log.info("Index file is empty, skipping old files deletion.");
+            return;
+        }
+
         final ZonedDateTime lastModified = findOldestModifiedDate();
         log.info("Started deleting files older than {}", lastModified.format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
@@ -94,8 +103,7 @@ public class DeleteOldFilesScheduledTask {
 
         ReentrantLock lock = ffmpegUtil.getIndexFileLock();
 
-        final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
-        final Path indexFile = recordsFolder.resolve(INDEX);
+        final Path indexFile = getIndexPath();
 
         ZonedDateTime lastModified;
 
@@ -117,5 +125,10 @@ public class DeleteOldFilesScheduledTask {
         }
 
         return lastModified;
+    }
+
+    private Path getIndexPath() {
+        final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
+        return recordsFolder.resolve(INDEX);
     }
 }
