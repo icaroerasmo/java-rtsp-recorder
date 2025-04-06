@@ -14,6 +14,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Month;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDate;
@@ -188,46 +189,49 @@ public class FfmpegUtil {
                 final Map<String, String> info1 = extractInfoFromFileName(entry1.getKey());
                 final Map<String, String> info2 = extractInfoFromFileName(entry2.getKey());
 
+                // Multiplies by -1 to reverse the order
+                BiFunction<Integer, Integer, Integer> intComparator = (Integer x, Integer y) -> -1 * Integer.compare(x, y);
+
                 int year1 = Integer.parseInt(info1.get("year"));
                 int year2 = Integer.parseInt(info2.get("year"));
 
                 if(year1 != year2) {
-                    return Integer.compare(year1, year2);
+                    return intComparator.apply(year1, year2);
                 }
 
                 int month1 = Integer.parseInt(info1.get("month"));
                 int month2 = Integer.parseInt(info2.get("month"));
 
                 if(month1 != month2) {
-                    return Integer.compare(month1, month2);
+                    return intComparator.apply(month1, month2);
                 }
 
                 int day1 = Integer.parseInt(info1.get("day"));
                 int day2 = Integer.parseInt(info2.get("day"));
 
                 if(day1 != day2) {
-                    return Integer.compare(day1, day2);
+                    return intComparator.apply(day1, day2);
                 }
 
                 int hour1 = Integer.parseInt(info1.get("hour"));
                 int hour2 = Integer.parseInt(info2.get("hour"));
 
                 if(hour1 != hour2) {
-                    return Integer.compare(hour1, hour2);
+                    return intComparator.apply(hour1, hour2);
                 }
 
                 int minute1 = Integer.parseInt(info1.get("minute"));
                 int minute2 = Integer.parseInt(info2.get("minute"));
 
                 if(minute1 != minute2) {
-                    return Integer.compare(minute1, minute2);
+                    return intComparator.apply(minute1, minute2);
                 }
 
                 int second1 = Integer.parseInt(info1.get("second"));
                 int second2 = Integer.parseInt(info2.get("second"));
 
                 if(second1 != second2) {
-                    return Integer.compare(second1, second2);
+                    return intComparator.apply(second1, second2);
                 }
 
                 return entry1.getKey().compareTo(entry2.getKey());
