@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Month;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
@@ -49,12 +50,9 @@ public class FfmpegUtil {
             int minute = Integer.parseInt(matcher.group(6));
             int second = Integer.parseInt(matcher.group(7));
 
-            LocalDate date = LocalDate.of(year, month, day);
-            String monthName = date.getMonth().getDisplayName(TextStyle.FULL, Locale.getDefault());
-
             dateMap.put("camName", camName);
             dateMap.put("year", String.valueOf(year));
-            dateMap.put("month", monthName);
+            dateMap.put("month", String.valueOf(month));
             dateMap.put("day", String.valueOf(day));
             dateMap.put("hour", String.valueOf(hour));
             dateMap.put("minute", String.valueOf(minute));
@@ -238,9 +236,13 @@ public class FfmpegUtil {
                 final String fileName = entry.getKey();
                 final Path originPath = entry.getValue();
                 final Map<String, String> dateMap = extractInfoFromFileName(fileName);
+
+                final int month = Integer.parseInt(dateMap.get("month"));
+                final String monthName = Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault());
+
                 final Path destinationFolder =
                         Paths.get(recordsFolder.toString(), dateMap.get("year"),
-                                dateMap.get("month"), dateMap.get("day"),
+                                monthName, dateMap.get("day"),
                                 dateMap.get("hour"), dateMap.get("camName"));
                 final Path destinationPath = destinationFolder.resolve(fileName);
 
