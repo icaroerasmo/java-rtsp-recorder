@@ -21,7 +21,6 @@ rclone:
 storage:
   delete-old-files-cron: '0 30 1 * * *' # default value is '0 20 0 * * *' (30 minutes past 1am)
   max-records-folder-size: 20GB # default value is 10GB
-  max-age-local-video-files: 3d # default value is 3 days
   max-age-remote-video-files: 20d # default value is 20 days
   file-mover-interval: 5m # default value is 5 minutes
   tmp-folder: '/app/data/tmp' # default value is '/app/data/tmp' (container tmp folder)

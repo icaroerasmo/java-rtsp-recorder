@@ -2,6 +2,7 @@ package com.icaroerasmo.util;
 
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
@@ -23,6 +24,9 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class FfmpegUtil {
 
+    public static final String INDEX = ".index";
+
+    @Getter
     private final ReentrantLock indexFileLock = new ReentrantLock();
 
     private final JavaRtspProperties javaRtspProperties;
@@ -63,7 +67,7 @@ public class FfmpegUtil {
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
-        final Path indexFile = recordsFolder.resolve(".index");
+        final Path indexFile = recordsFolder.resolve(INDEX);
 
         List<String> fileList;
 
@@ -172,7 +176,7 @@ public class FfmpegUtil {
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
-        final Path indexFile = recordsFolder.resolve(".index");
+        final Path indexFile = recordsFolder.resolve(INDEX);
 
         fileNames.parallelStream().
             map(fileName -> Map.entry(fileName, tmpFolder.resolve(fileName))).
