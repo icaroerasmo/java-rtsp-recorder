@@ -15,6 +15,8 @@ import java.time.Month;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDate;
@@ -31,7 +33,7 @@ public class FfmpegUtil {
     @Getter
     private final ReentrantLock indexFileLock = new ReentrantLock();
 
-    private final JavaRtspProperties javaRtspProperties;
+    private final StorageProperties storageProperties;
     private final PropertiesUtil propertiesUtil;
 
     public Map<String, String> extractInfoFromFileName(String input) {
@@ -68,7 +70,6 @@ public class FfmpegUtil {
     private void deleteFilesFromIndex(Long saveUpTo) {
         log.info("Deleting files from index");
 
-        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
         final Path indexFile = recordsFolder.resolve(INDEX);
 
@@ -176,7 +177,6 @@ public class FfmpegUtil {
 
         log.info("Moving files to records folder");
 
-        final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
         final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
         final Path indexFile = recordsFolder.resolve(INDEX);
@@ -184,155 +184,165 @@ public class FfmpegUtil {
         fileNames.parallelStream().
             map(fileName -> Map.entry(fileName, tmpFolder.resolve(fileName))).
             filter(entry -> Files.exists(entry.getValue())).
-            sorted((entry1, entry2) -> {
-
-                final Map<String, String> info1 = extractInfoFromFileName(entry1.getKey());
-                final Map<String, String> info2 = extractInfoFromFileName(entry2.getKey());
-
-                // Multiplies by -1 to reverse the order
-                BiFunction<Integer, Integer, Integer> intComparator = (Integer x, Integer y) -> -1 * Integer.compare(x, y);
-
-                int year1 = Integer.parseInt(info1.get("year"));
-                int year2 = Integer.parseInt(info2.get("year"));
-
-                if(year1 != year2) {
-                    return intComparator.apply(year1, year2);
-                }
-
-                int month1 = Integer.parseInt(info1.get("month"));
-                int month2 = Integer.parseInt(info2.get("month"));
-
-                if(month1 != month2) {
-                    return intComparator.apply(month1, month2);
-                }
-
-                int day1 = Integer.parseInt(info1.get("day"));
-                int day2 = Integer.parseInt(info2.get("day"));
-
-                if(day1 != day2) {
-                    return intComparator.apply(day1, day2);
-                }
-
-                int hour1 = Integer.parseInt(info1.get("hour"));
-                int hour2 = Integer.parseInt(info2.get("hour"));
-
-                if(hour1 != hour2) {
-                    return intComparator.apply(hour1, hour2);
-                }
-
-                int minute1 = Integer.parseInt(info1.get("minute"));
-                int minute2 = Integer.parseInt(info2.get("minute"));
-
-                if(minute1 != minute2) {
-                    return intComparator.apply(minute1, minute2);
-                }
-
-                int second1 = Integer.parseInt(info1.get("second"));
-                int second2 = Integer.parseInt(info2.get("second"));
-
-                if(second1 != second2) {
-                    return intComparator.apply(second1, second2);
-                }
-
-                return entry1.getKey().compareTo(entry2.getKey());
-            }).
-            map(entry -> {
-                final String fileName = entry.getKey();
-                final Path originPath = entry.getValue();
-                final Map<String, String> dateMap = extractInfoFromFileName(fileName);
-
-                final int month = Integer.parseInt(dateMap.get("month"));
-                final String monthName = Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault());
-
-                final Path destinationFolder =
-                        Paths.get(recordsFolder.toString(), dateMap.get("year"),
-                                monthName, dateMap.get("day"),
-                                dateMap.get("hour"), dateMap.get("camName"));
-                final Path destinationPath = destinationFolder.resolve(fileName);
-
-                if(!Files.exists(destinationFolder)) {
-                    try {
-                        Files.createDirectories(destinationFolder);
-                    } catch (Exception e) {
-                        log.error("Error creating folder: {}", e.getMessage());
-                        log.debug("Error creating folder: {}", e.getMessage(), e);
-                        throw new RuntimeException(e);
-                    }
-                }
-                return Map.entry(originPath, destinationPath);
-            }).
-            forEachOrdered(
-                entry -> {
-
-                    final Path originPath = entry.getKey();
-                    final Path destinationPath = entry.getValue();
-
-                    log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
-
-                    long maxFolderSizeInBytes =
-                            propertiesUtil.storageUnitConverter(
-                                    storageProperties.getMaxRecordsFolderSize(), "B");
-
-                    long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
-                    long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
-                    long probableSize = sizeOfFolder + sizeOfFile;
-
-                    if(probableSize > maxFolderSizeInBytes) {
-                        deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
-                    }
-
-                    String indexLine = "";
-
-                    try {
-                        Files.move(originPath, destinationPath);
-                        BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
-                        indexLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
-                    } catch (IOException e) {
-                        log.error("Error moving file: {}", e.getMessage(), e);
-                        log.debug("Error moving file: {}", e.getMessage());
-                        return;
-                    }
-
-                    boolean success = true;
-
-                    try {
-                        log.info("Writing to index file: {}", indexLine.substring(0, indexLine.length()-1));
-
-                        indexFileLock.lock();
-
-                        // Creates copy of orifinal index file
-                        final Path tmpFile = generateTmpPath(indexFile);
-
-                        if(indexFile.toFile().exists()) {
-                            Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
-                        }
-
-                        // Write new file name to index file
-                        Files.write(tmpFile, indexLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-
-                        // Replace original index file with new one
-                        Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
-
-                    } catch (Exception e) {
-                        log.error("Error writing to index file: {}", e.getMessage(), e);
-                        log.debug("Error writing to index file: {}", e.getMessage());
-                        success = false;
-                    } finally {
-                        indexFileLock.unlock();
-                    }
-
-                    if(success) {
-                        log.info("File {} moved successfully.", entry.getKey());
-                    } else {
-                        log.error("Error when trying to move file: {}.", entry.getKey());
-                    }
-                }
-            );
+            sorted(filesNamesComparator()).
+            map(filesPathMapper(recordsFolder)).
+            forEachOrdered(filesMover(recordsFolder, indexFile));
 
         log.info("Done moving files to records folder");
     }
 
-    private static Path generateTmpPath(Path originalFile) {
+    private Consumer<Map.Entry<Path, Path>> filesMover(Path recordsFolder, Path indexFile) {
+        return (entry) -> {
+
+            final Path originPath = entry.getKey();
+            final Path destinationPath = entry.getValue();
+
+            log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
+
+            long maxFolderSizeInBytes =
+                    propertiesUtil.storageUnitConverter(
+                            storageProperties.getMaxRecordsFolderSize(), "B");
+
+            long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
+            long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
+            long probableSize = sizeOfFolder + sizeOfFile;
+
+            if(probableSize > maxFolderSizeInBytes) {
+                deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
+            }
+
+            String indexLine = "";
+
+            try {
+                Files.move(originPath, destinationPath);
+                BasicFileAttributes attrs = Files.readAttributes(destinationPath, BasicFileAttributes.class);
+                indexLine = String.format("%s,%d,%s%n", destinationPath, attrs.size(), attrs.lastModifiedTime());
+            } catch (IOException e) {
+                log.error("Error moving file: {}", e.getMessage(), e);
+                log.debug("Error moving file: {}", e.getMessage());
+                return;
+            }
+
+            boolean success = true;
+
+            try {
+                log.info("Writing to index file: {}", indexLine.substring(0, indexLine.length()-1));
+
+                indexFileLock.lock();
+
+                // Creates copy of orifinal index file
+                final Path tmpFile = generateTmpPath(indexFile);
+
+                if(indexFile.toFile().exists()) {
+                    Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                // Write new file name to index file
+                Files.write(tmpFile, indexLine.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+                // Replace original index file with new one
+                Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
+
+            } catch (Exception e) {
+                log.error("Error writing to index file: {}", e.getMessage(), e);
+                log.debug("Error writing to index file: {}", e.getMessage());
+                success = false;
+            } finally {
+                indexFileLock.unlock();
+            }
+
+            if(success) {
+                log.info("File {} moved successfully.", entry.getKey());
+            } else {
+                log.error("Error when trying to move file: {}.", entry.getKey());
+            }
+        };
+    }
+
+    private Function<Map.Entry<String, Path>, Map.Entry<Path, Path>> filesPathMapper(Path recordsFolder) {
+        return entry -> {
+            final String fileName = entry.getKey();
+            final Path originPath = entry.getValue();
+            final Map<String, String> dateMap = extractInfoFromFileName(fileName);
+
+            final int month = Integer.parseInt(dateMap.get("month"));
+            final String monthName = Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault());
+
+            final Path destinationFolder =
+                    Paths.get(recordsFolder.toString(), dateMap.get("year"),
+                            monthName, dateMap.get("day"),
+                            dateMap.get("hour"), dateMap.get("camName"));
+            final Path destinationPath = destinationFolder.resolve(fileName);
+
+            if (!Files.exists(destinationFolder)) {
+                try {
+                    Files.createDirectories(destinationFolder);
+                } catch (Exception e) {
+                    log.error("Error creating folder: {}", e.getMessage());
+                    log.debug("Error creating folder: {}", e.getMessage(), e);
+                    throw new RuntimeException(e);
+                }
+            }
+            return Map.entry(originPath, destinationPath);
+        };
+    }
+
+    private Comparator<Map.Entry<String, Path>> filesNamesComparator() {
+        return (entry1, entry2) -> {
+
+            final Map<String, String> info1 = extractInfoFromFileName(entry1.getKey());
+            final Map<String, String> info2 = extractInfoFromFileName(entry2.getKey());
+
+            // Multiplies by -1 to reverse the order
+            BiFunction<Integer, Integer, Integer> intComparator = (Integer x, Integer y) -> -1 * Integer.compare(x, y);
+
+            int year1 = Integer.parseInt(info1.get("year"));
+            int year2 = Integer.parseInt(info2.get("year"));
+
+            if (year1 != year2) {
+                return intComparator.apply(year1, year2);
+            }
+
+            int month1 = Integer.parseInt(info1.get("month"));
+            int month2 = Integer.parseInt(info2.get("month"));
+
+            if (month1 != month2) {
+                return intComparator.apply(month1, month2);
+            }
+
+            int day1 = Integer.parseInt(info1.get("day"));
+            int day2 = Integer.parseInt(info2.get("day"));
+
+            if (day1 != day2) {
+                return intComparator.apply(day1, day2);
+            }
+
+            int hour1 = Integer.parseInt(info1.get("hour"));
+            int hour2 = Integer.parseInt(info2.get("hour"));
+
+            if (hour1 != hour2) {
+                return intComparator.apply(hour1, hour2);
+            }
+
+            int minute1 = Integer.parseInt(info1.get("minute"));
+            int minute2 = Integer.parseInt(info2.get("minute"));
+
+            if (minute1 != minute2) {
+                return intComparator.apply(minute1, minute2);
+            }
+
+            int second1 = Integer.parseInt(info1.get("second"));
+            int second2 = Integer.parseInt(info2.get("second"));
+
+            if (second1 != second2) {
+                return intComparator.apply(second1, second2);
+            }
+
+            return entry1.getKey().compareTo(entry2.getKey());
+        };
+    }
+
+    private Path generateTmpPath(Path originalFile) {
         return originalFile.getParent().
                 resolve(originalFile.getName(
                         originalFile.getNameCount() - 1) + ".tmp");
