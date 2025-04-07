@@ -18,12 +18,13 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.stream.Stream;
 
 @Log4j2
 @Service
@@ -46,13 +47,20 @@ public class FfmpegService {
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
 
-        final List<String> mkvFiles = Files.list(
-                Paths.get(storageProperties.getTmpFolder())).
-                filter(f -> f.toString().endsWith(".mkv")).
-                map(f -> f.getName(f.getNameCount()-1).toString()).
-                toList();
+        try (Stream<Path> allFiles = Files.list(Paths.get(storageProperties.getTmpFolder()))) {
 
-        ffmpegUtil.moveFilesToRecordsFolder(mkvFiles);
+            final List<String> mkvFiles = allFiles.
+                    filter(f -> f.toString().endsWith(".mkv")).
+                    map(f -> f.getName(f.getNameCount()-1).toString()).
+                    toList();
+
+            ffmpegUtil.moveFilesToRecordsFolder(mkvFiles);
+
+        } catch (Exception e) {
+            log.error("Error listing files in tmp folder: {}", e.getMessage());
+            log.debug("Error listing files in tmp folder: {}", e.getMessage(), e);
+            throw new RuntimeException("Error listing files in tmp folder", e);
+        }
 
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
 
@@ -111,7 +119,7 @@ public class FfmpegService {
     }
 
     @SneakyThrows
-    private Future<Void> ffmpegFutureSubmitter(Map.Entry<String, FfmpegCommandParser.FfmpegCommandParserBuilder> entry) {
+    private void ffmpegFutureSubmitter(Map.Entry<String, FfmpegCommandParser.FfmpegCommandParserBuilder> entry) {
 
         log.info("Camera {} initiating...", entry.getKey());
         telegramUtil.sendMessage(MessagesEnum.CAM_INITIATING, entry.getKey());
@@ -119,6 +127,5 @@ public class FfmpegService {
         Future<Void> future = executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()));
         futureStorage.put(entry.getKey(), "main", future);
 
-        return future;
     }
 }

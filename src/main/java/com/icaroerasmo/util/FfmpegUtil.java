@@ -157,8 +157,8 @@ public class FfmpegUtil {
 
         try {
             folders.filter(Files::isDirectory).forEach(directory -> {
-                try {
-                    if(Files.list(directory).findAny().isEmpty()) {
+                try(Stream<Path> files = Files.list(directory)) {
+                    if(files.findAny().isEmpty()) {
                         log.info("Deleting folder: {}", directory);
                         Files.delete(directory);
                     } else {
@@ -211,7 +211,7 @@ public class FfmpegUtil {
                 deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
             }
 
-            String indexLine = "";
+            String indexLine;
 
             try {
                 Files.move(originPath, destinationPath);
@@ -230,7 +230,7 @@ public class FfmpegUtil {
 
                 indexFileLock.lock();
 
-                // Creates copy of orifinal index file
+                // Creates copy of original index file
                 final Path tmpFile = generateTmpPath(indexFile);
 
                 if(indexFile.toFile().exists()) {
