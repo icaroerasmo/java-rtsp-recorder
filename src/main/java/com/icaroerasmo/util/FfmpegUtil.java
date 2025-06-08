@@ -44,25 +44,25 @@ public class FfmpegUtil {
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);
 
-        if (matcher.matches()) {
-            String camName = matcher.group(1);
-            int year = Integer.parseInt(matcher.group(2));
-            int month = Integer.parseInt(matcher.group(3));
-            int day = Integer.parseInt(matcher.group(4));
-            int hour = Integer.parseInt(matcher.group(5));
-            int minute = Integer.parseInt(matcher.group(6));
-            int second = Integer.parseInt(matcher.group(7));
-
-            dateMap.put("camName", camName);
-            dateMap.put("year", String.valueOf(year));
-            dateMap.put("month", String.valueOf(month));
-            dateMap.put("day", String.valueOf(day));
-            dateMap.put("hour", String.valueOf(hour));
-            dateMap.put("minute", String.valueOf(minute));
-            dateMap.put("second", String.valueOf(second));
-        } else {
+        if(!matcher.matches()) {
             throw new IllegalArgumentException("Input string does not match the expected pattern.");
         }
+
+        final String camName = matcher.group(1);
+        final int year = Integer.parseInt(matcher.group(2));
+        final int month = Integer.parseInt(matcher.group(3));
+        final int day = Integer.parseInt(matcher.group(4));
+        final int hour = Integer.parseInt(matcher.group(5));
+        final int minute = Integer.parseInt(matcher.group(6));
+        final int second = Integer.parseInt(matcher.group(7));
+
+        dateMap.put("camName", camName);
+        dateMap.put("year", String.valueOf(year));
+        dateMap.put("month", String.valueOf(month));
+        dateMap.put("day", String.valueOf(day));
+        dateMap.put("hour", String.valueOf(hour));
+        dateMap.put("minute", String.valueOf(minute));
+        dateMap.put("second", String.valueOf(second));
 
         return dateMap;
     }

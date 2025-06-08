@@ -23,32 +23,36 @@ public class PropertiesUtil {
     }
 
     public String durationParser(String duration, TimeUnit timeUnit) {
+
         Pattern pattern = Pattern.compile("(?:(\\d+)d)?(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?(?:(\\d+)mm)?");
         Matcher matcher = pattern.matcher(duration);
+
+        if(!matcher.matches()) {
+            throw new IllegalArgumentException("Input string does not match the expected pattern.");
+        }
+
+        final String days = matcher.group(1);
+        final String hours = matcher.group(2);
+        final String minutes = matcher.group(3);
+        final String seconds = matcher.group(4);
+        final String milliseconds = matcher.group(5);
+
         long millisecondsBuff = 0;
 
-        if (matcher.matches()) {
-            String days = matcher.group(1);
-            String hours = matcher.group(2);
-            String minutes = matcher.group(3);
-            String seconds = matcher.group(4);
-            String milliseconds = matcher.group(5);
-
-            if (days != null) {
-                millisecondsBuff += Long.parseLong(days) * 86400000;
-            }
-            if (hours != null) {
-                millisecondsBuff += Long.parseLong(hours) * 3600000;
-            }
-            if (minutes != null) {
-                millisecondsBuff += Long.parseLong(minutes) * 60000;
-            }
-            if (seconds != null) {
-                millisecondsBuff += Long.parseLong(seconds) * 1000;
-            }
-            if (milliseconds != null) {
-                millisecondsBuff += Long.parseLong(milliseconds);
-            }
+        if (days != null) {
+            millisecondsBuff += Long.parseLong(days) * 86400000;
+        }
+        if (hours != null) {
+            millisecondsBuff += Long.parseLong(hours) * 3600000;
+        }
+        if (minutes != null) {
+            millisecondsBuff += Long.parseLong(minutes) * 60000;
+        }
+        if (seconds != null) {
+            millisecondsBuff += Long.parseLong(seconds) * 1000;
+        }
+        if (milliseconds != null) {
+            millisecondsBuff += Long.parseLong(milliseconds);
         }
 
         return String.valueOf(convertToUnit(timeUnit, millisecondsBuff));
@@ -63,55 +67,32 @@ public class PropertiesUtil {
         Pattern pattern = Pattern.compile("^(\\d+)(b|Kb|B|KB|MB|GB)$");
         Matcher matcher = pattern.matcher(val);
 
-        String unit = null;
-        Long value = null;
-
-        if (matcher.matches()) {
-            value = Long.parseLong(matcher.group(1));
-            unit = matcher.group(2);
+        if(!matcher.matches()) {
+            throw new IllegalArgumentException("Input string does not match the expected pattern.");
         }
 
-        long bytes;
+        final long value = Long.parseLong(matcher.group(1));
+        final String unit = matcher.group(2);
 
-        switch (unit) {
-            case "b":
-                bytes = value / 8;
-                break;
-            case "Kb":
-                bytes = value * 1024 / 8;
-                break;
-            case "B":
-                bytes = value;
-                break;
-            case "KB":
-                bytes = value * 1024;
-                break;
-            case "MB":
-                bytes = value * 1024 * 1024;
-                break;
-            case "GB":
-                bytes = value * 1024 * 1024 * 1024;
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid unit: " + unit);
-        }
+        long bytes = switch (unit) {
+            case "b" -> value / 8;
+            case "Kb" -> value * 1024 / 8;
+            case "B" -> value;
+            case "KB" -> value * 1024;
+            case "MB" -> value * 1024 * 1024;
+            case "GB" -> value * 1024 * 1024 * 1024;
+            default -> throw new IllegalArgumentException("Invalid unit: " + unit);
+        };
 
-        switch (targetUnit) {
-            case "b":
-                return bytes * 8;
-            case "Kb":
-                return bytes * 8 / 1024;
-            case "B":
-                return bytes;
-            case "KB":
-                return bytes / 1024;
-            case "MB":
-                return bytes / 1024 / 1024;
-            case "GB":
-                return bytes / 1024 / 1024 / 1024;
-            default:
-                throw new IllegalArgumentException("Invalid target unit: " + targetUnit);
-        }
+        return switch (targetUnit) {
+            case "b" -> bytes * 8;
+            case "Kb" -> bytes * 8 / 1024;
+            case "B" -> bytes;
+            case "KB" -> bytes / 1024;
+            case "MB" -> bytes / 1024 / 1024;
+            case "GB" -> bytes / 1024 / 1024 / 1024;
+            default -> throw new IllegalArgumentException("Invalid target unit: " + targetUnit);
+        };
     }
 
     public long sizeOfFile(Path path) {
