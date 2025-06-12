@@ -4,6 +4,7 @@ import com.icaroerasmo.enums.MessagesEnum;
 import com.icaroerasmo.parsers.CommandParser;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.util.Utilities;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendDocument;
@@ -31,6 +32,7 @@ public abstract class RcloneRunner implements IRcloneRunner {
     private final TelegramProperties telegramProperties;
     private final TelegramBot telegram;
     private final TranslateShellRunner translateShellRunner;
+    private final Utilities utilities;
 
     @SneakyThrows
     public void start(CommandParser.CommandParserBuilder command) {
@@ -108,9 +110,7 @@ public abstract class RcloneRunner implements IRcloneRunner {
 
         } finally {
 
-            if (process != null) {
-                process.destroy();
-            }
+            utilities.killProcess(process);
 
             final StringBuilder outputLogs = errorLogsFuture != null ? errorLogsFuture.get() : null;
 

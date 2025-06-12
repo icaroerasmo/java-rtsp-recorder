@@ -64,4 +64,17 @@ public class Utilities {
 
         return strTime;
     }
+
+    public void killProcess(Process process) {
+        if(process != null) {
+            process.destroy();
+            try {
+                process.getInputStream().close();
+                process.getOutputStream().close();
+                process.getErrorStream().close();
+            } catch (Exception e) {
+                log.error("Error closing process streams", e);
+            }
+        }
+    }
 }

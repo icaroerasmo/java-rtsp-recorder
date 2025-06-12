@@ -29,7 +29,6 @@ import static com.icaroerasmo.util.FfmpegUtil.INDEX;
 public class DeleteOldFilesScheduledTask {
 
     private final FfmpegUtil ffmpegUtil;
-    private final PropertiesUtil propertiesUtil;
     private final StorageProperties storageProperties;
 
     @Scheduled(cron = "#{@storageProperties.deleteOldFilesCron}")
