@@ -1,5 +1,7 @@
 package com.icaroerasmo.runners;
 
+import com.icaroerasmo.util.Utilities;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
@@ -9,12 +11,16 @@ import java.util.Locale;
 
 @Log4j2
 @Service
+@RequiredArgsConstructor
 public class TranslateShellRunner {
 
+    private final Utilities utilities;
+
     public String translateText(String text) {
+        Process process = null;
         try {
             Locale locale = Locale.getDefault();
-            Process process = new ProcessBuilder("trans", "-b", ":" + locale.toLanguageTag().toLowerCase(), text).start();
+            process = new ProcessBuilder("trans", "-b", ":" + locale.toLanguageTag().toLowerCase(), text).start();
             String translatedText = "";
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 translatedText = reader.readLine();
@@ -23,6 +29,8 @@ public class TranslateShellRunner {
         } catch (Exception e) {
             log.error("Error translating text: {}", text, e);
             return text;
+        } finally {
+            utilities.killProcess(process);
         }
     }
 }

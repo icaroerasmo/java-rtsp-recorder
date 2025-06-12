@@ -4,6 +4,7 @@ import com.icaroerasmo.enums.MessagesEnum;
 import com.icaroerasmo.parsers.FfmpegCommandParser;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.TelegramUtil;
+import com.icaroerasmo.util.Utilities;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -25,6 +26,7 @@ public class FfmpegRunner {
     private final ExecutorService executorService;
     private final FutureStorage futureStorage;
     private final TelegramUtil telegramUtil;
+    private final Utilities utilities;
 
     @SneakyThrows
     public Void run(String camName, FfmpegCommandParser.FfmpegCommandParserBuilder command) {
@@ -92,9 +94,7 @@ public class FfmpegRunner {
                     log.warn("Cam {}: Starting attempt number {} failed.", camName, attemptNo, e);
                     telegramUtil.sendMessage(MessagesEnum.CAM_ATTEMPT_FAILED, camName, attemptNo);
                 } finally {
-                    if (process != null) {
-                        process.destroy();
-                    }
+                    utilities.killProcess(process);
                 }
 
                 attempt++;
