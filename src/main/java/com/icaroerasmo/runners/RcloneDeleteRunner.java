@@ -5,6 +5,7 @@ import com.icaroerasmo.properties.RcloneProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.util.Utilities;
 import com.pengrad.telegrambot.TelegramBot;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +27,10 @@ public class RcloneDeleteRunner extends RcloneRunner {
             RcloneProperties rcloneProperties,
             TelegramProperties telegramProperties,
             TelegramBot telegram,
-            TranslateShellRunner translateShellRunner, StorageProperties storageProperties) {
-        super(executorService, futureStorage, telegramProperties, telegram, translateShellRunner);
+            TranslateShellRunner translateShellRunner,
+            StorageProperties storageProperties,
+            Utilities utilities) {
+        super(executorService, futureStorage, telegramProperties, telegram, translateShellRunner, utilities);
         this.storageProperties = storageProperties;
         this.rcloneProperties = rcloneProperties;
     }
