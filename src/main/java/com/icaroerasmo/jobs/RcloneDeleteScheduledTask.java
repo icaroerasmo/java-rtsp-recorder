@@ -20,6 +20,6 @@ public class RcloneDeleteScheduledTask {
     @Scheduled(cron = "#{@rcloneProperties.deleteCron}")
     private void rcloneDelete() {
         Future<Void> future = executorService.submit(rcloneDeleteRunner::run);
-        futureStorage.put("rclone", "main", future);
+        futureStorage.put("rclone", "delete", future);
     }
 }
