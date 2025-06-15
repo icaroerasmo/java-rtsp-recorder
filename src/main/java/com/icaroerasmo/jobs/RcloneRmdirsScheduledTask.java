@@ -20,6 +20,6 @@ public class RcloneRmdirsScheduledTask {
     @Scheduled(cron = "#{@rcloneProperties.rmdirsCron}")
     private void rcloneRmdirs() {
         Future<Void> future = executorService.submit(rcloneRmdirsRunner::run);
-        futureStorage.put("rclone", "main", future);
+        futureStorage.put("rclone", "rmdirs", future);
     }
 }

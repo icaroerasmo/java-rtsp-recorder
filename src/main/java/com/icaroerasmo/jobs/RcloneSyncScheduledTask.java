@@ -20,6 +20,6 @@ public class RcloneSyncScheduledTask {
     @Scheduled(cron = "#{@rcloneProperties.syncCron}")
     private void rcloneSync() {
         Future<Void> future = executorService.submit(rcloneSyncRunner::run);
-        futureStorage.put("rclone", "main", future);
+        futureStorage.put("rclone", "sync", future);
     }
 }

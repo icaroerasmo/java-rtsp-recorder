@@ -20,6 +20,6 @@ public class RcloneDedupeScheduledTask {
     @Scheduled(cron = "#{@rcloneProperties.dedupeCron}")
     private void rcloneDedupe() {
         Future<Void> future = executorService.submit(rcloneDedupeRunner::run);
-        futureStorage.put("rclone", "main", future);
+        futureStorage.put("rclone", "dedupe", future);
     }
 }
