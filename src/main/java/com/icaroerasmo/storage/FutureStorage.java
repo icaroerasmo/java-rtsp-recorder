@@ -47,6 +47,6 @@ public class FutureStorage {
     }
 
     public boolean isRunning(String name, String threadName) {
-        return threads.get(name).get(threadName).state().equals(Future.State.RUNNING);
+        return get(name, threadName).state().equals(Future.State.RUNNING);
     }
 }
