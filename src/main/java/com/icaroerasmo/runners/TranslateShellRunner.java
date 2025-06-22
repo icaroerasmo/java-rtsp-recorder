@@ -20,7 +20,8 @@ public class TranslateShellRunner {
         Process process = null;
         try {
             Locale locale = Locale.getDefault();
-            process = new ProcessBuilder("trans", "-b", ":" + locale.toLanguageTag().toLowerCase(), text).start();
+            process = new ProcessBuilder(
+                    "trans", "-e", "bing", "-b", ":" + locale.toLanguageTag().toLowerCase(), text).start();
             String translatedText = "";
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 translatedText = reader.readLine();
