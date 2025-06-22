@@ -29,16 +29,18 @@ public class FutureStorage {
 
     public void delete(String name, String threadName) {
 
-        if(get(name) == null) {
+        var threadMap = get(name);
+
+        if(threadMap == null) {
             return;
         }
 
-        if(threadName != null && get(name, threadName) != null) {
-            get(name).remove(threadName);
+        if(threadName != null) {
+            threadMap.remove(threadName);
             return;
         }
 
-        get(name).clear();
+        threadMap.clear();
         threads.remove(name);
     }
 
