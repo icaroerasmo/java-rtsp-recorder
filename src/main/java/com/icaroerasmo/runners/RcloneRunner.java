@@ -9,16 +9,10 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
-import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -53,7 +47,7 @@ public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunn
     @SneakyThrows
     public void start(CommandParser.CommandParserBuilder command) {
         Process process = null;
-        Future<StringBuilder> outputLogsFuture = null;
+        Future<StringBuilder> outputLogsFuture;
         Future<StringBuilder> errorLogsFuture = null;
 
         final List<String> commandList = command.buildAsList();
@@ -112,7 +106,7 @@ public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunn
 
     @Override
     public void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum) {
-        BaseRequest<?, ?> request = null;
+        BaseRequest<?, ?> request;
 
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
             request = new SendMessage(telegramProperties.getChatId(),

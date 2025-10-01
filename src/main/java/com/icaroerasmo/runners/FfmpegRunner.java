@@ -5,18 +5,11 @@ import com.icaroerasmo.parsers.FfmpegCommandParser;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -51,8 +44,8 @@ public class FfmpegRunner extends AbstractRunner {
 
             while (attempt < maxRetries && !success) {
                 Process process = null;
-                Future<StringBuilder> outputLogsFuture = null;
-                Future<StringBuilder> errorLogsFuture = null;
+                Future<StringBuilder> outputLogsFuture;
+                Future<StringBuilder> errorLogsFuture;
                 try {
                     process = new ProcessBuilder(command.buildAsList()).start();
 

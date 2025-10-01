@@ -1,7 +1,6 @@
 package com.icaroerasmo.config;
 
 import com.icaroerasmo.properties.GeneralProperties;
-import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.pengrad.telegrambot.TelegramBot;
 import jakarta.annotation.PostConstruct;

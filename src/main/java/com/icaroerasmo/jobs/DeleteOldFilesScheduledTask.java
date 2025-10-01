@@ -2,7 +2,6 @@ package com.icaroerasmo.jobs;
 
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.util.FfmpegUtil;
-import com.icaroerasmo.util.PropertiesUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;

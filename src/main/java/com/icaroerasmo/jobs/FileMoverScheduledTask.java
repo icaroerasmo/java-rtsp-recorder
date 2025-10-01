@@ -3,11 +3,6 @@ package com.icaroerasmo.jobs;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
-import com.icaroerasmo.runners.RcloneDedupeRunner;
-import com.icaroerasmo.runners.RcloneDeleteRunner;
-import com.icaroerasmo.runners.RcloneRmdirsRunner;
-import com.icaroerasmo.runners.RcloneSyncRunner;
-import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.FfmpegUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -19,8 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 @Log4j2
 @Component
