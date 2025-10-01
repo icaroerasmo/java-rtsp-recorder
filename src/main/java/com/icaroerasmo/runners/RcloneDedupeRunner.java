@@ -18,7 +18,6 @@ public class RcloneDedupeRunner extends RcloneRunner {
 
     private final RcloneProperties rcloneProperties;
 
-    @Autowired
     public RcloneDedupeRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,

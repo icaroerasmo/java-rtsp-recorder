@@ -18,7 +18,6 @@ public class RcloneRmdirsRunner extends RcloneRunner {
 
     private final RcloneProperties rcloneProperties;
 
-    @Autowired
     public RcloneRmdirsRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,

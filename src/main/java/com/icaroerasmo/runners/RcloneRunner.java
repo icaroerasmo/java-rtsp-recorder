@@ -13,9 +13,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -24,15 +26,29 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Log4j2
-@RequiredArgsConstructor
-public abstract class RcloneRunner implements IRcloneRunner {
+public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunner {
 
-    private final ExecutorService executorService;
     private final FutureStorage futureStorage;
     private final TelegramProperties telegramProperties;
     private final TelegramBot telegram;
     private final TranslateShellRunner translateShellRunner;
     private final Utilities utilities;
+
+    public RcloneRunner(
+            ExecutorService executorService,
+            FutureStorage futureStorage,
+            TelegramProperties telegramProperties,
+            TelegramBot telegram,
+            TranslateShellRunner translateShellRunner,
+            Utilities utilities
+            ) {
+        super(executorService);
+        this.futureStorage = futureStorage;
+        this.telegramProperties = telegramProperties;
+        this.telegram = telegram;
+        this.translateShellRunner = translateShellRunner;
+        this.utilities = utilities;
+    }
 
     @SneakyThrows
     public void start(CommandParser.CommandParserBuilder command) {
@@ -50,42 +66,9 @@ public abstract class RcloneRunner implements IRcloneRunner {
 
             process = new ProcessBuilder(commandList).start();
 
-            final Process finalProcess = process;
+            outputLogsFuture = launchLogListener(process.getInputStream(), "Rclone", "Stream closed for rclone output logs thread.");
 
-            outputLogsFuture = executorService.submit(() -> {
-
-                final StringBuilder outputLogs = new StringBuilder();
-
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        log.info("Rclone: {}", line);
-                        outputLogs.append(line).append("\n");
-                    }
-                } catch (IOException e) {
-                    log.debug("Stream closed for rclone output logs thread.");
-                }
-
-                return outputLogs;
-            });
-
-            errorLogsFuture = executorService.submit(() -> {
-
-                final StringBuilder errorLogs = new StringBuilder();
-
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        log.info("Rclone: {}", line);
-                        errorLogs.append(line).append("\n");
-                    }
-                } catch (IOException e) {
-                    log.debug("Stream closed for rclone error logs thread.");
-                }
-
-                return errorLogs;
-            });
-
+            errorLogsFuture = launchLogListener(process.getErrorStream(), "Rclone", "Stream closed for rclone error logs thread.");
 
             futureStorage.put("rclone", commandList.get(1) + " outputLogsFuture", outputLogsFuture);
             futureStorage.put("rclone", commandList.get(1) + " errorLogsFuture", errorLogsFuture);
@@ -117,6 +100,7 @@ public abstract class RcloneRunner implements IRcloneRunner {
             sendEndNotification(outputLogs, message);
         }
     }
+
 
     @Override
     public void sendStartNotification(MessagesEnum message) {

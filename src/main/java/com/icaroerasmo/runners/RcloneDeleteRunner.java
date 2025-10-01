@@ -20,7 +20,6 @@ public class RcloneDeleteRunner extends RcloneRunner {
     private final StorageProperties storageProperties;
     private final RcloneProperties rcloneProperties;
 
-    @Autowired
     public RcloneDeleteRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,

@@ -29,7 +29,7 @@ public class BeansAndConfig {
     }
 
     @Bean
-    public ExecutorService executorService(RtspProperties rtspProperties) {
+    public ExecutorService executorService() {
         return Executors.newCachedThreadPool();
     }
 

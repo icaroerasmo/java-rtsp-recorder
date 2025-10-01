@@ -20,7 +20,6 @@ public class RcloneSyncRunner extends RcloneRunner {
     private final RcloneProperties rcloneProperties;
     private final StorageProperties storageProperties;
 
-    @Autowired
     public RcloneSyncRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,
