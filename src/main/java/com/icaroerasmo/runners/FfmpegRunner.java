@@ -93,19 +93,4 @@ public class FfmpegRunner extends AbstractRunner {
             }
         return null;
     }
-
-//    @NotNull
-//    private Future<Void> launchLogListener(final InputStream inputStream, String camName, String errorDescription) {
-//        return executorService.submit(() -> {
-//            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-//                String line;
-//                while ((line = reader.readLine()) != null) {
-//                    log.debug("Cam {}: {}", camName, line);
-//                }
-//            } catch (IOException e) {
-//                throw new RuntimeException("Cam " + camName + errorDescription, e);
-//            }
-//            return null;
-//        });
-//    }
 }
