@@ -4,6 +4,8 @@ import com.icaroerasmo.parsers.RcloneRmdirsCommandParser;
 import com.icaroerasmo.properties.RcloneProperties;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.services.TranslationService;
+import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
 import com.pengrad.telegrambot.TelegramBot;
 import lombok.extern.log4j.Log4j2;
@@ -22,10 +24,9 @@ public class RcloneRmdirsRunner extends RcloneRunner {
             FutureStorage futureStorage,
             RcloneProperties rcloneProperties,
             TelegramProperties telegramProperties,
-            TelegramBot telegram,
-            TranslateShellRunner translateShellRunner,
+            TelegramUtil telegramUtil,
             Utilities utilities) {
-        super(executorService, futureStorage, telegramProperties, telegram, translateShellRunner, utilities);
+        super(executorService, futureStorage, telegramProperties, telegramUtil, utilities);
         this.rcloneProperties = rcloneProperties;
     }
 

@@ -4,8 +4,8 @@ import com.icaroerasmo.enums.MessagesEnum;
 import com.icaroerasmo.parsers.CommandParser;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
-import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -24,23 +24,20 @@ public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunn
 
     private final FutureStorage futureStorage;
     private final TelegramProperties telegramProperties;
-    private final TelegramBot telegram;
-    private final TranslateShellRunner translateShellRunner;
+    private final TelegramUtil telegramUtil;
     private final Utilities utilities;
 
     public RcloneRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,
             TelegramProperties telegramProperties,
-            TelegramBot telegram,
-            TranslateShellRunner translateShellRunner,
+            TelegramUtil telegramUtil,
             Utilities utilities
-            ) {
+    ) {
         super(executorService);
         this.futureStorage = futureStorage;
         this.telegramProperties = telegramProperties;
-        this.telegram = telegram;
-        this.translateShellRunner = translateShellRunner;
+        this.telegramUtil = telegramUtil;
         this.utilities = utilities;
     }
 
@@ -98,31 +95,22 @@ public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunn
 
     @Override
     public void sendStartNotification(MessagesEnum message) {
-        final SendMessage request = new SendMessage(telegramProperties.getChatId(),
-                translateShellRunner.translateText(message.getMessage().
-                        formatted(formattedDateForCaption(LocalDateTime.now()))));
-        telegram.execute(request);
+        // use TelegramUtil which handles translation and sending
+        telegramUtil.sendMessage(message, formattedDateForCaption(LocalDateTime.now()));
     }
 
     @Override
     public void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum) {
-        BaseRequest<?, ?> request;
-
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
-            request = new SendMessage(telegramProperties.getChatId(),
-                    translateShellRunner.translateText(
-                            (messagesEnum.getMessage()+". "+MessagesEnum.RCLONE_NO_LOGS.getMessage()).
-                                    formatted(formattedDateForCaption(LocalDateTime.now()))));
+            String combined = String.format("%s. %s",
+                    telegramUtil.getTranslation(messagesEnum, formattedDateForCaption(LocalDateTime.now())),
+                    telegramUtil.getTranslation(MessagesEnum.RCLONE_NO_LOGS));
+            telegramUtil.sendRawMessage(combined);
         } else {
-            request = new SendDocument(telegramProperties.getChatId(),
-                    outputLogs.toString().getBytes(StandardCharsets.UTF_8)).
-                    fileName("log%s.log".formatted(formattedDateForLogName(LocalDateTime.now()))).
-                    caption(
-                            translateShellRunner.translateText(messagesEnum.getMessage().formatted(
-                                    formattedDateForCaption(LocalDateTime.now()))));
+            String caption = telegramUtil.getTranslation(messagesEnum, formattedDateForCaption(LocalDateTime.now()));
+            telegramUtil.sendDocument("log%s.log".formatted(formattedDateForLogName(LocalDateTime.now())),
+                    outputLogs.toString().getBytes(StandardCharsets.UTF_8), caption);
         }
-
-        telegram.execute(request);
     }
 
     private MessagesEnum startProcessMessagePicker(List<String> command) {
