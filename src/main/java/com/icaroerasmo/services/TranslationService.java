@@ -17,11 +17,10 @@ public class TranslationService {
 
     public String getMessage(MessagesEnum key, Object... params) {
         try {
-            Locale locale = Locale.getDefault();
-            return messageSource.getMessage(key.name(), params, key.getMessage(), locale);
+            return messageSource.getMessage(key.name(), params, Locale.getDefault());
         } catch (Exception e) {
             log.warn("Translation lookup failed for {}: {}", key.name(), e.getMessage());
-            return String.format(key.getMessage(), params);
+            return key.name();
         }
     }
 }
