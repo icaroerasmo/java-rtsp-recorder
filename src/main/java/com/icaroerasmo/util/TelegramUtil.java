@@ -4,6 +4,7 @@ import com.icaroerasmo.enums.MessagesEnum;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.services.TranslationService;
 import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +22,10 @@ public class TelegramUtil {
 
     public void sendMessage(MessagesEnum message, Object... params) {
         try {
-            final SendMessage request = new SendMessage(telegramProperties.getChatId(),
-                    translationService.getMessage(message, params));
+            String raw = translationService.getMessage(message, params);
+            String formatted = TelegramMessageFormatter.format(message, raw);
+            final SendMessage request = new SendMessage(telegramProperties.getChatId(), formatted)
+                    .parseMode(ParseMode.HTML);
             telegram.execute(request);
         } catch (Exception e) {
             log.error("Error sending message to Telegram: {}", e.getMessage());
@@ -32,7 +35,7 @@ public class TelegramUtil {
 
     public void sendRawMessage(String text) {
         try {
-            final SendMessage request = new SendMessage(telegramProperties.getChatId(), text);
+            final SendMessage request = new SendMessage(telegramProperties.getChatId(), text).parseMode(ParseMode.HTML);
             telegram.execute(request);
         } catch (Exception e) {
             log.error("Error sending raw message to Telegram: {}", e.getMessage());
@@ -57,17 +60,7 @@ public class TelegramUtil {
             return translationService.getMessage(message, params);
         } catch (Exception e) {
             log.warn("Translation failed for {}: {}", message, e.getMessage());
-            return message.getMessage();
-        }
-    }
-
-    // Convenience: allow raw code translations
-    public String getTranslation(String code, Object... params) {
-        try {
-            return translationService.getMessage(code, params);
-        } catch (Exception e) {
-            log.warn("Translation failed for code {}: {}", code, e.getMessage());
-            return String.format(code, params);
+            return message.name();
         }
     }
 }
