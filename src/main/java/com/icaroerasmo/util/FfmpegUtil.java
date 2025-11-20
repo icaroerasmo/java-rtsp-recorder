@@ -1,17 +1,16 @@
 package com.icaroerasmo.util;
 
-import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
@@ -19,8 +18,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.time.LocalDate;
-import java.time.format.TextStyle;
 import java.util.stream.Stream;
 
 @Log4j2

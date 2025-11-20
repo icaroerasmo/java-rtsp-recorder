@@ -6,27 +6,32 @@ import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Log4j2
 @Getter
 @Component
-@RequiredArgsConstructor
-public class FfmpegRunner {
+public class FfmpegRunner extends AbstractRunner {
 
-    private final ExecutorService executorService;
     private final FutureStorage futureStorage;
     private final TelegramUtil telegramUtil;
     private final Utilities utilities;
+
+    public FfmpegRunner(
+            ExecutorService executorService,
+            FutureStorage futureStorage,
+            TelegramUtil telegramUtil,
+            Utilities utilities) {
+        super(executorService);
+        this.futureStorage = futureStorage;
+        this.telegramUtil = telegramUtil;
+        this.utilities = utilities;
+    }
 
     @SneakyThrows
     public Void run(String camName, FfmpegCommandParser.FfmpegCommandParserBuilder command) {
@@ -39,36 +44,14 @@ public class FfmpegRunner {
 
             while (attempt < maxRetries && !success) {
                 Process process = null;
-                Future<Void> outputLogsFuture = null;
-                Future<Void> errorLogsFuture = null;
+                Future<StringBuilder> outputLogsFuture;
+                Future<StringBuilder> errorLogsFuture;
                 try {
                     process = new ProcessBuilder(command.buildAsList()).start();
 
-                    Process finalProcess = process;
+                    outputLogsFuture = launchLogListener(process.getInputStream(), "Cam "+camName, "Error reading ffmpeg output", true);
 
-                    outputLogsFuture = executorService.submit(() -> {
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                log.debug("Cam {}: {}", camName, line);
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException("Cam " + camName + ": Error reading ffmpeg output", e);
-                        }
-                        return null;
-                    });
-
-                    errorLogsFuture = executorService.submit(() -> {
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                log.debug("Cam {}: {}", camName, line);
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException("Cam " + camName + ": Error reading ffmpeg error output", e);
-                        }
-                        return null;
-                    });
+                    errorLogsFuture = launchLogListener(process.getErrorStream(), "Cam "+camName, "Error reading ffmpeg error output", true);
 
                     futureStorage.put(camName, "outputLogsFuture", outputLogsFuture);
                     futureStorage.put(camName, "errorLogsFuture", errorLogsFuture);

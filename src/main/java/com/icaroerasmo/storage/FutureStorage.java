@@ -29,16 +29,18 @@ public class FutureStorage {
 
     public void delete(String name, String threadName) {
 
-        if(threads.get(name) == null) {
+        var threadMap = get(name);
+
+        if(threadMap == null) {
             return;
         }
 
-        if(threadName != null && threads.get(name).get(threadName) != null) {
-            threads.get(name).remove(threadName);
+        if(threadName != null) {
+            threadMap.remove(threadName);
             return;
         }
 
-        threads.get(name).clear();
+        threadMap.clear();
         threads.remove(name);
     }
 
@@ -47,6 +49,6 @@ public class FutureStorage {
     }
 
     public boolean isRunning(String name, String threadName) {
-        return threads.get(name).get(threadName).state().equals(Future.State.RUNNING);
+        return get(name, threadName).state().equals(Future.State.RUNNING);
     }
 }

@@ -4,19 +4,15 @@ import com.icaroerasmo.enums.MessagesEnum;
 import com.icaroerasmo.parsers.CommandParser;
 import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
-import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,20 +20,31 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Log4j2
-@RequiredArgsConstructor
-public abstract class RcloneRunner implements IRcloneRunner {
+public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunner {
 
-    private final ExecutorService executorService;
     private final FutureStorage futureStorage;
     private final TelegramProperties telegramProperties;
-    private final TelegramBot telegram;
-    private final TranslateShellRunner translateShellRunner;
+    private final TelegramUtil telegramUtil;
     private final Utilities utilities;
+
+    public RcloneRunner(
+            ExecutorService executorService,
+            FutureStorage futureStorage,
+            TelegramProperties telegramProperties,
+            TelegramUtil telegramUtil,
+            Utilities utilities
+    ) {
+        super(executorService);
+        this.futureStorage = futureStorage;
+        this.telegramProperties = telegramProperties;
+        this.telegramUtil = telegramUtil;
+        this.utilities = utilities;
+    }
 
     @SneakyThrows
     public void start(CommandParser.CommandParserBuilder command) {
         Process process = null;
-        Future<StringBuilder> outputLogsFuture = null;
+        Future<StringBuilder> outputLogsFuture;
         Future<StringBuilder> errorLogsFuture = null;
 
         final List<String> commandList = command.buildAsList();
@@ -50,42 +57,9 @@ public abstract class RcloneRunner implements IRcloneRunner {
 
             process = new ProcessBuilder(commandList).start();
 
-            final Process finalProcess = process;
+            outputLogsFuture = launchLogListener(process.getInputStream(), "Rclone", "Stream closed for rclone output logs thread.");
 
-            outputLogsFuture = executorService.submit(() -> {
-
-                final StringBuilder outputLogs = new StringBuilder();
-
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        log.info("Rclone: {}", line);
-                        outputLogs.append(line).append("\n");
-                    }
-                } catch (IOException e) {
-                    log.debug("Stream closed for rclone output logs thread.");
-                }
-
-                return outputLogs;
-            });
-
-            errorLogsFuture = executorService.submit(() -> {
-
-                final StringBuilder errorLogs = new StringBuilder();
-
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        log.info("Rclone: {}", line);
-                        errorLogs.append(line).append("\n");
-                    }
-                } catch (IOException e) {
-                    log.debug("Stream closed for rclone error logs thread.");
-                }
-
-                return errorLogs;
-            });
-
+            errorLogsFuture = launchLogListener(process.getErrorStream(), "Rclone", "Stream closed for rclone error logs thread.");
 
             futureStorage.put("rclone", commandList.get(1) + " outputLogsFuture", outputLogsFuture);
             futureStorage.put("rclone", commandList.get(1) + " errorLogsFuture", errorLogsFuture);
@@ -118,33 +92,25 @@ public abstract class RcloneRunner implements IRcloneRunner {
         }
     }
 
+
     @Override
     public void sendStartNotification(MessagesEnum message) {
-        final SendMessage request = new SendMessage(telegramProperties.getChatId(),
-                translateShellRunner.translateText(message.getMessage().
-                        formatted(formattedDateForCaption(LocalDateTime.now()))));
-        telegram.execute(request);
+        // use TelegramUtil which handles translation and sending
+        telegramUtil.sendMessage(message, formattedDateForCaption(LocalDateTime.now()));
     }
 
     @Override
     public void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum) {
-        BaseRequest<?, ?> request = null;
-
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
-            request = new SendMessage(telegramProperties.getChatId(),
-                    translateShellRunner.translateText(
-                            (messagesEnum.getMessage()+". "+MessagesEnum.RCLONE_NO_LOGS.getMessage()).
-                                    formatted(formattedDateForCaption(LocalDateTime.now()))));
+            String combined = String.format("%s. %s",
+                    telegramUtil.getTranslation(messagesEnum, formattedDateForCaption(LocalDateTime.now())),
+                    telegramUtil.getTranslation(MessagesEnum.RCLONE_NO_LOGS));
+            telegramUtil.sendRawMessage(combined);
         } else {
-            request = new SendDocument(telegramProperties.getChatId(),
-                    outputLogs.toString().getBytes(StandardCharsets.UTF_8)).
-                    fileName("log%s.log".formatted(formattedDateForLogName(LocalDateTime.now()))).
-                    caption(
-                            translateShellRunner.translateText(messagesEnum.getMessage().formatted(
-                                    formattedDateForCaption(LocalDateTime.now()))));
+            String caption = telegramUtil.getTranslation(messagesEnum, formattedDateForCaption(LocalDateTime.now()));
+            telegramUtil.sendDocument("log%s.log".formatted(formattedDateForLogName(LocalDateTime.now())),
+                    outputLogs.toString().getBytes(StandardCharsets.UTF_8), caption);
         }
-
-        telegram.execute(request);
     }
 
     private MessagesEnum startProcessMessagePicker(List<String> command) {
