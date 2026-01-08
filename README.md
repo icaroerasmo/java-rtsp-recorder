@@ -1,5 +1,13 @@
 # Java RTSP recorder
 
+> **🚀 Multi-Architecture Support:** This application supports Docker images for the 6 most common platforms:
+> - **linux/amd64** - Standard x86_64 (Intel/AMD processors)
+> - **linux/arm64** - ARM 64-bit (Orange Pi 5 Max, Raspberry Pi 4/5, Apple Silicon)
+> - **linux/arm64/v8** - ARMv8 64-bit (explicit ARMv8 support for maximum compatibility)
+> - **linux/arm/v7** - ARM 32-bit v7 (Raspberry Pi 3/4 in 32-bit mode)
+> - **linux/arm/v6** - ARM 32-bit v6 (Raspberry Pi Zero/1)
+> - **linux/386** - x86 32-bit (legacy systems)
+
 ## docker-compose.yaml
 
 run `mkdir -p java-rtsp-recorder/{config,data/{tmp,records}}` before running docker compose.
