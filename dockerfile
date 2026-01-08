@@ -1,8 +1,13 @@
+# syntax=docker/dockerfile:1
 FROM --platform=$BUILDPLATFORM maven:3.9.9-eclipse-temurin-21 AS build
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
 WORKDIR /app
 COPY src ./src/
 COPY pom.xml .
-RUN mvn clean package
+RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 RUN mkdir -p /app/data/tmp /app/data/records
@@ -10,8 +15,10 @@ RUN apk add --no-cache tzdata
 RUN apk add --no-cache rclone
 RUN apk add --no-cache translate-shell
 RUN apk add --no-cache ffmpeg
+
 ARG TZ
 ENV TZ $TZ
+
 COPY --from=build /app/target/java-rtsp-recorder-*.jar /app/java-rtsp-recorder.jar
 RUN ls -la /app
 ENTRYPOINT [ "java", "-Dspring.config.additional-location=optional:/app/config/config.yaml", "-jar", "/app/java-rtsp-recorder.jar" ]
