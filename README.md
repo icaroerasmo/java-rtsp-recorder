@@ -14,24 +14,41 @@ run `mkdir -p java-rtsp-recorder/{config,data/{tmp,records}}` before running doc
 
 `rclone.conf` and `config.yaml` must be placed in `java-rtsp-recorder/config` folder.
 
+The image now ships with an ffmpeg build that can run in **copy**, **CPU**, **NVIDIA**, or **Radeon/VAAPI** modes. All supported modes keep the existing segment-based file rotation.
+
 ```yaml
 version: "3.9"
 services:
   java-rtsp-recorder:
     container_name: java-rtsp-recorder
-    image: ghcr.io/icaroerasmo/java-rtsp-recorder:latest
+    build:
+      context: .
+      dockerfile: dockerfile
+    image: java-rtsp-recorder:local
     restart: always
     network_mode: host
     environment:
-        TZ: America/Bahia
+      TZ: America/Bahia
     volumes:
       - ./java-rtsp-recorder/config:/app/config
       - ./java-rtsp-recorder/data:/app/data
 ```
 
+### Optional runtime additions
+
+Use one of the following only when you want GPU access inside the container:
+
+| Mode | Extra compose settings |
+| --- | --- |
+| CPU only | No extra settings |
+| NVIDIA | `runtime: nvidia` plus `NVIDIA_VISIBLE_DEVICES=all` and `NVIDIA_DRIVER_CAPABILITIES=compute,video,utility` |
+| Radeon / VAAPI | `devices: - /dev/dri:/dev/dri` |
+
 ## Docker run
 
 ```bash
+docker build -f dockerfile -t java-rtsp-recorder:local .
+
 docker run -d \
   --name java-rtsp-recorder \
   --restart always \
@@ -39,7 +56,35 @@ docker run -d \
   -e TZ=America/Bahia \
   -v ./java-rtsp-recorder/config:/app/config \
   -v ./java-rtsp-recorder/data:/app/data \
-  ghcr.io/icaroerasmo/java-rtsp-recorder:latest
+  java-rtsp-recorder:local
+```
+
+### GPU-aware `docker run` examples
+
+```bash
+# NVIDIA
+docker run -d \
+  --name java-rtsp-recorder \
+  --restart always \
+  --network host \
+  --runtime nvidia \
+  -e TZ=America/Bahia \
+  -e NVIDIA_VISIBLE_DEVICES=all \
+  -e NVIDIA_DRIVER_CAPABILITIES=compute,video,utility \
+  -v ./java-rtsp-recorder/config:/app/config \
+  -v ./java-rtsp-recorder/data:/app/data \
+  java-rtsp-recorder:local
+
+# Radeon / VAAPI
+docker run -d \
+  --name java-rtsp-recorder \
+  --restart always \
+  --network host \
+  --device /dev/dri:/dev/dri \
+  -e TZ=America/Bahia \
+  -v ./java-rtsp-recorder/config:/app/config \
+  -v ./java-rtsp-recorder/data:/app/data \
+  java-rtsp-recorder:local
 ```
 
 ## config.yaml
@@ -75,6 +120,8 @@ storage:
 rtsp:
   timeout: 30s # default value is 30 seconds
   video-duration: 5m # default value is 5 minutes
+  hardware-acceleration: 'copy' # valid values: 'copy', 'cpu', 'nvidia', 'radeon' ('none' is still accepted as a legacy alias for 'copy')
+  vaapi-device: '/dev/dri/renderD128' # default Radeon/VAAPI render node
   cameras: # mandatory. List of cameras to record
     - name: 'hallway'
       host: '192.168.0.1'
@@ -93,3 +140,16 @@ rtsp:
     - name: 'backyard'
       url: 'rtsp://admin:password@192.168.0.3:554/onvif1' # if camera is configured with URL all other fields are ignored
 ```
+
+`rtsp.hardware-acceleration` controls the encoder ffmpeg uses:
+
+| Value | ffmpeg path |
+| --- | --- |
+| `copy` | legacy `-c copy` remuxing |
+| `cpu` | `libx264` on CPU |
+| `nvidia` | `h264_nvenc` on NVIDIA GPU |
+| `radeon` | `h264_vaapi` on `/dev/dri/renderD128` |
+
+If the field is omitted, the application falls back to `copy`. The older value `none` is also accepted and behaves the same as `copy`.
+
+For your current Frigate deployment, set `hardware-acceleration: nvidia` in `java-rtsp-recorder/config/config.yaml`.
