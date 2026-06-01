@@ -1,8 +1,12 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+# syntax=docker/dockerfile:1
+FROM --platform=$BUILDPLATFORM maven:3.9.9-eclipse-temurin-21 AS build
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 WORKDIR /app
 COPY src ./src/
 COPY pom.xml .
-RUN mvn clean package
+RUN mvn clean package -DskipTests
 
 FROM archlinux:latest
 WORKDIR /app
