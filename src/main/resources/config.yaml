@@ -29,7 +29,7 @@ storage:
 rtsp:
   timeout: 30s # default value is 30 seconds
   video-duration: 5m # default value is 5 minutes
-  hardware-acceleration: 'none' # valid values: 'none', 'nvidia', 'radeon'
+  hardware-acceleration: 'copy' # valid values: 'copy', 'cpu', 'nvidia', 'radeon' ('none' is accepted as a legacy alias for 'copy')
   vaapi-device: '/dev/dri/renderD128' # default Radeon/VAAPI render node
   cameras: # mandatory. List of cameras to record
     - name: 'porta'

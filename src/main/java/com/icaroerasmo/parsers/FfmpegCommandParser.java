@@ -116,8 +116,6 @@ public class FfmpegCommandParser implements CommandParser {
             command.add("0:a?");
             command.add("-dn");
             command.add("-sn");
-            command.add("-c:a");
-            command.add("copy");
             appendVideoEncoding(command);
 
             if (ffmpegCommandParser.getDoneSegmentsListSize() != null && ffmpegCommandParser.getVideoDuration() != null) {
@@ -137,6 +135,8 @@ public class FfmpegCommandParser implements CommandParser {
                 command.add(doneSegmentsList);
                 command.add("-segment_list_size");
                 command.add(String.valueOf(ffmpegCommandParser.getDoneSegmentsListSize()));
+                command.add("-break_non_keyframes");
+                command.add("1");
                 command.add("-strftime");
                 command.add("1");
                 command.add("-segment_time");
@@ -158,10 +158,16 @@ public class FfmpegCommandParser implements CommandParser {
             }
 
             switch (acceleration) {
+                case NONE, COPY -> appendCopyEncoding(command);
+                case CPU -> appendCpuEncoding(command);
                 case NVIDIA -> appendNvidiaEncoding(command);
                 case RADEON -> appendVaapiEncoding(command);
-                case NONE -> appendCpuEncoding(command);
             }
+        }
+
+        private void appendCopyEncoding(List<String> command) {
+            command.add("-c");
+            command.add("copy");
         }
 
         private void appendNvidiaEncoding(List<String> command) {
@@ -177,6 +183,10 @@ public class FfmpegCommandParser implements CommandParser {
             command.add("28");
             command.add("-b:v");
             command.add("0");
+            command.add("-forced-idr");
+            command.add("1");
+            command.add("-c:a");
+            command.add("copy");
         }
 
         private void appendVaapiEncoding(List<String> command) {
@@ -188,6 +198,8 @@ public class FfmpegCommandParser implements CommandParser {
             command.add("h264_vaapi");
             command.add("-qp");
             command.add("23");
+            command.add("-c:a");
+            command.add("copy");
         }
 
         private void appendCpuEncoding(List<String> command) {
@@ -197,6 +209,8 @@ public class FfmpegCommandParser implements CommandParser {
             command.add("veryfast");
             command.add("-crf");
             command.add("23");
+            command.add("-c:a");
+            command.add("copy");
         }
     }
 }

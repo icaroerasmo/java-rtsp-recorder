@@ -13,7 +13,7 @@ public class RtspProperties implements ConfigYaml {
 
     private String timeout = "5s";
     private String videoDuration = "5m";
-    private HardwareAcceleration hardwareAcceleration = HardwareAcceleration.NONE;
+    private HardwareAcceleration hardwareAcceleration = HardwareAcceleration.COPY;
     private String vaapiDevice = "/dev/dri/renderD128";
     private List<Camera> cameras;
 
@@ -34,6 +34,6 @@ public class RtspProperties implements ConfigYaml {
     }
 
     public enum HardwareAcceleration {
-        NONE, NVIDIA, RADEON
+        NONE, COPY, CPU, NVIDIA, RADEON
     }
 }

@@ -6,7 +6,7 @@ run `mkdir -p java-rtsp-recorder/{config,data/{tmp,records}}` before running doc
 
 `rclone.conf` and `config.yaml` must be placed in `java-rtsp-recorder/config` folder.
 
-The image now ships with an ffmpeg build that can run in **CPU-only**, **NVIDIA**, or **Radeon/VAAPI** environments. The recorder now **transcodes video instead of stream-copying it**, so ffmpeg will actively use the selected encoder path.
+The image now ships with an ffmpeg build that can run in **copy**, **CPU**, **NVIDIA**, or **Radeon/VAAPI** modes. All supported modes keep the existing segment-based file rotation.
 
 ```yaml
 version: "3.9"
@@ -112,7 +112,7 @@ storage:
 rtsp:
   timeout: 30s # default value is 30 seconds
   video-duration: 5m # default value is 5 minutes
-  hardware-acceleration: 'none' # valid values: 'none', 'nvidia', 'radeon'
+  hardware-acceleration: 'copy' # valid values: 'copy', 'cpu', 'nvidia', 'radeon' ('none' is still accepted as a legacy alias for 'copy')
   vaapi-device: '/dev/dri/renderD128' # default Radeon/VAAPI render node
   cameras: # mandatory. List of cameras to record
     - name: 'hallway'
@@ -137,8 +137,11 @@ rtsp:
 
 | Value | ffmpeg path |
 | --- | --- |
-| `none` | `libx264` on CPU |
+| `copy` | legacy `-c copy` remuxing |
+| `cpu` | `libx264` on CPU |
 | `nvidia` | `h264_nvenc` on NVIDIA GPU |
 | `radeon` | `h264_vaapi` on `/dev/dri/renderD128` |
+
+If the field is omitted, the application falls back to `copy`. The older value `none` is also accepted and behaves the same as `copy`.
 
 For your current Frigate deployment, set `hardware-acceleration: nvidia` in `java-rtsp-recorder/config/config.yaml`.
