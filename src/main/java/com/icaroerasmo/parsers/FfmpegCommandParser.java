@@ -18,6 +18,8 @@ public class FfmpegCommandParser implements CommandParser {
     private String transportProtocol;
     private String tmpPath;
     private String cameraName;
+    private RtspProperties.HardwareAcceleration hardwareAcceleration;
+    private String vaapiDevice;
 
     public static FfmpegCommandParserBuilder builder() {
         return new FfmpegCommandParserBuilder();
@@ -71,6 +73,16 @@ public class FfmpegCommandParser implements CommandParser {
             return this;
         }
 
+        public FfmpegCommandParserBuilder hardwareAcceleration(RtspProperties.HardwareAcceleration hardwareAcceleration) {
+            ffmpegCommandParser.setHardwareAcceleration(hardwareAcceleration);
+            return this;
+        }
+
+        public FfmpegCommandParserBuilder vaapiDevice(String vaapiDevice) {
+            ffmpegCommandParser.setVaapiDevice(vaapiDevice);
+            return this;
+        }
+
         @Override
         public List<String> buildAsList() {
             if (ffmpegCommandParser.getUrl() == null || ffmpegCommandParser.getUrl().isBlank()) {
@@ -98,10 +110,23 @@ public class FfmpegCommandParser implements CommandParser {
 
             command.add("-i");
             command.add(ffmpegCommandParser.getUrl());
-            command.add("-c");
+            command.add("-map");
+            command.add("0:v:0");
+            command.add("-map");
+            command.add("0:a?");
+            command.add("-dn");
+            command.add("-sn");
+            command.add("-c:a");
             command.add("copy");
+            appendVideoEncoding(command);
 
             if (ffmpegCommandParser.getDoneSegmentsListSize() != null && ffmpegCommandParser.getVideoDuration() != null) {
+                final String segmentDuration = String.valueOf(
+                        propertiesUtil.durationParser(ffmpegCommandParser.getVideoDuration(), TimeUnit.SECONDS)
+                );
+
+                command.add("-force_key_frames");
+                command.add("expr:gte(t,n_forced*" + segmentDuration + ")");
                 command.add("-f");
                 command.add("segment");
 
@@ -115,7 +140,7 @@ public class FfmpegCommandParser implements CommandParser {
                 command.add("-strftime");
                 command.add("1");
                 command.add("-segment_time");
-                command.add(String.valueOf(propertiesUtil.durationParser(ffmpegCommandParser.getVideoDuration(), TimeUnit.SECONDS)));
+                command.add(segmentDuration);
                 command.add("-reset_timestamps");
                 command.add("1");
             }
@@ -123,6 +148,55 @@ public class FfmpegCommandParser implements CommandParser {
             command.add(ffmpegCommandParser.getTmpPath() + "/" + ffmpegCommandParser.getCameraName() + "%Y-%m-%d_%H-%M-%S.mkv");
 
             return command;
+        }
+
+        private void appendVideoEncoding(List<String> command) {
+            RtspProperties.HardwareAcceleration acceleration = ffmpegCommandParser.getHardwareAcceleration();
+
+            if (acceleration == null) {
+                acceleration = RtspProperties.HardwareAcceleration.NONE;
+            }
+
+            switch (acceleration) {
+                case NVIDIA -> appendNvidiaEncoding(command);
+                case RADEON -> appendVaapiEncoding(command);
+                case NONE -> appendCpuEncoding(command);
+            }
+        }
+
+        private void appendNvidiaEncoding(List<String> command) {
+            command.add("-c:v");
+            command.add("h264_nvenc");
+            command.add("-preset");
+            command.add("p4");
+            command.add("-tune");
+            command.add("ll");
+            command.add("-rc");
+            command.add("vbr");
+            command.add("-cq");
+            command.add("28");
+            command.add("-b:v");
+            command.add("0");
+        }
+
+        private void appendVaapiEncoding(List<String> command) {
+            command.add("-vaapi_device");
+            command.add(ffmpegCommandParser.getVaapiDevice());
+            command.add("-vf");
+            command.add("format=nv12,hwupload");
+            command.add("-c:v");
+            command.add("h264_vaapi");
+            command.add("-qp");
+            command.add("23");
+        }
+
+        private void appendCpuEncoding(List<String> command) {
+            command.add("-c:v");
+            command.add("libx264");
+            command.add("-preset");
+            command.add("veryfast");
+            command.add("-crf");
+            command.add("23");
         }
     }
 }

@@ -109,11 +109,13 @@ public class FfmpegService {
         return Map.entry(camera.getName(),
                 FfmpegCommandParser.builder().
                         cameraName(camera.getName()).
+                        hardwareAcceleration(rtspProperties.getHardwareAcceleration()).
                         transportProtocol(camera.getProtocol()).
                         url(propertiesUtil.cameraUrlParser(camera)).
                         doneSegmentsListSize(20).
                         tmpPath(storageProperties.getTmpFolder()).
                         timeout(rtspProperties.getTimeout()).
+                        vaapiDevice(rtspProperties.getVaapiDevice()).
                         videoDuration(rtspProperties.getVideoDuration())
         );
     }
