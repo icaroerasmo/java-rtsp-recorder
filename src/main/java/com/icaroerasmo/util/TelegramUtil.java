@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TelegramUtil {
 
+    private static final String APP_TAG = "[Recorder] ";
+
     private final TranslationService translationService;
     private final TelegramProperties telegramProperties;
     private final TelegramBot telegram;
@@ -24,7 +26,8 @@ public class TelegramUtil {
         try {
             String raw = translationService.getMessage(message, params);
             String formatted = TelegramMessageFormatter.format(message, raw);
-            final SendMessage request = new SendMessage(telegramProperties.getChatId(), formatted)
+            String tagged = APP_TAG + formatted;
+            final SendMessage request = new SendMessage(telegramProperties.getChatId(), tagged)
                     .parseMode(ParseMode.HTML);
             telegram.execute(request);
         } catch (Exception e) {
