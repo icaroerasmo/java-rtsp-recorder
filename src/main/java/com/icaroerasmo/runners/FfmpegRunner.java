@@ -49,6 +49,8 @@ public class FfmpegRunner extends AbstractRunner {
                 try {
                     process = new ProcessBuilder(command.buildAsList()).start();
 
+                    futureStorage.putProcess(camName, process);
+
                     outputLogsFuture = launchLogListener(process.getInputStream(), "Cam "+camName, "Error reading ffmpeg output", true);
 
                     errorLogsFuture = launchLogListener(process.getErrorStream(), "Cam "+camName, "Error reading ffmpeg error output", true);

@@ -10,13 +10,23 @@ import java.util.concurrent.Future;
 public class FutureStorage {
 
     private final Map<String, Map<String, Future<?>>> threads = new ConcurrentHashMap<>();
+    private final Map<String, Process> processes = new ConcurrentHashMap<>();
 
     public void put(String futureName, String threadName, Future<?> future) {
         threads.computeIfAbsent(futureName, k -> new ConcurrentHashMap<>()).put(threadName, future);
     }
 
+    public void putProcess(String name, Process process) {
+        processes.put(name, process);
+    }
+
+    public Process getProcess(String name) {
+        return processes.get(name);
+    }
+
     public Future<?> get(String name, String threadName) {
-        return get(name).get(threadName);
+        Map<String, Future<?>> map = get(name);
+        return map != null ? map.get(threadName) : null;
     }
 
     public Map<String, Future<?>> get(String name) {
@@ -42,6 +52,7 @@ public class FutureStorage {
 
         threadMap.clear();
         threads.remove(name);
+        processes.remove(name);
     }
 
     public boolean isRunning(String name) {
@@ -49,6 +60,7 @@ public class FutureStorage {
     }
 
     public boolean isRunning(String name, String threadName) {
-        return get(name, threadName).state().equals(Future.State.RUNNING);
+        Future<?> future = get(name, threadName);
+        return future != null && future.state().equals(Future.State.RUNNING);
     }
 }
