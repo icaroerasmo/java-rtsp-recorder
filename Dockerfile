@@ -1,24 +1,21 @@
-FROM maven:3.8.8-amazoncorretto-21 AS build
+FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
-COPY pom.xml .
 COPY src ./src/
+COPY pom.xml .
 RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:21-jre-jammy
-ENV DEBIAN_FRONTEND=noninteractive
+FROM archlinux:latest
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm --needed \
+    jre21-openjdk-headless \
     ffmpeg \
     rclone \
-    tzdata \
-    && rm -rf /var/lib/apt/lists/*
+    tzdata && \
+    pacman -Scc --noconfirm
 
-ARG TZ=UTC
-ENV TZ=${TZ}
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN mkdir -p /app/data/records /app/config
+RUN mkdir -p /app/data/records /app/data/tmp /app/config
 
 COPY --from=build /app/target/java-rtsp-recorder-*.jar /app/java-rtsp-recorder.jar
 
