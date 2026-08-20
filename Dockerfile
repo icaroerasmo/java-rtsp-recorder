@@ -19,4 +19,4 @@ RUN mkdir -p /app/data/records /app/data/tmp /app/config
 
 COPY --from=build /app/target/java-rtsp-recorder-*.jar /app/java-rtsp-recorder.jar
 
-ENTRYPOINT [ "java", "-Dspring.config.additional-location=/app/config/config.yaml", "-jar", "/app/java-rtsp-recorder.jar" ]
+ENTRYPOINT [ "java", "-Xmx2g", "-Dspring.config.additional-location=/app/config/config.yaml", "-jar", "/app/java-rtsp-recorder.jar" ]

@@ -14,7 +14,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
@@ -48,23 +47,22 @@ public class CamCheckerScheduledTask {
                 continue;
             }
 
-            // 2. Future is running — check if ffmpeg is actually producing output
-            long lastModified = getLastModifiedForCamera(camName, storageProperties.getTmpFolder());
+            // 2. Future is running — check if segmenter is actually producing segments
+            // The segment list file (.camName_done_segments) only updates when a segment completes,
+            // making it the true health indicator. The video file keeps getting written to even
+            // when the segmenter is stuck, so checking its lastModified is unreliable.
+            long segmentListAge = getSegmentListAge(camName, storageProperties.getTmpFolder());
 
-            if (lastModified < 0) {
-                // No files found at all — camera just started or no segments yet, give it time
-                log.debug("Cam {}: no recording files found in tmp, skipping staleness check", camName);
+            if (segmentListAge < 0) {
+                log.debug("Cam {}: no segment list found yet, skipping staleness check", camName);
                 continue;
             }
 
-            long staleAge = System.currentTimeMillis() - lastModified;
-
-            if (staleAge > staleThresholdMs) {
-                log.warn("Cam {} is running but last recording was {}ms ago (threshold: {}ms). Killing zombie and restarting...",
-                        camName, staleAge, staleThresholdMs);
+            if (segmentListAge > staleThresholdMs) {
+                log.warn("Cam {} is running but segment list was last updated {}ms ago (threshold: {}ms). Killing zombie and restarting...",
+                        camName, segmentListAge, staleThresholdMs);
                 telegramUtil.sendMessage(MessagesEnum.CAM_CHECKER_NOT_RECORDING, camName);
 
-                // Kill the zombie process
                 Process zombieProcess = futureStorage.getProcess(camName);
                 if (zombieProcess != null) {
                     log.warn("Cam {}: destroying zombie process pid {}", camName, zombieProcess.pid());
@@ -74,33 +72,19 @@ public class CamCheckerScheduledTask {
                 futureStorage.delete(camName);
                 ffmpegService.start(camName);
             } else {
-                log.debug("Cam {}: last recording updated {}ms ago — healthy", camName, staleAge);
+                log.debug("Cam {}: segment list updated {}ms ago — healthy", camName, segmentListAge);
             }
         }
     }
 
-    private long getLastModifiedForCamera(String camName, String tmpFolder) {
-        Path tmpPath = Path.of(tmpFolder);
-        if (!Files.isDirectory(tmpPath)) {
+    private long getSegmentListAge(String camName, String tmpFolder) {
+        Path segmentListPath = Path.of(tmpFolder, "." + camName + "_done_segments");
+        File segmentListFile = segmentListPath.toFile();
+
+        if (!segmentListFile.exists()) {
             return -1;
         }
 
-        long newestModified = -1;
-
-        File[] files = tmpPath.toFile().listFiles((dir, name) ->
-                name.startsWith(camName) && name.endsWith(".mkv"));
-
-        if (files == null || files.length == 0) {
-            return -1;
-        }
-
-        for (File file : files) {
-            long modified = file.lastModified();
-            if (modified > newestModified) {
-                newestModified = modified;
-            }
-        }
-
-        return newestModified;
+        return System.currentTimeMillis() - segmentListFile.lastModified();
     }
 }
