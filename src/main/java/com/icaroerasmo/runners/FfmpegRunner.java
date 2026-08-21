@@ -1,9 +1,9 @@
 package com.icaroerasmo.runners;
 
 import com.icaroerasmo.enums.MessagesEnum;
+import com.icaroerasmo.messaging.NotificationPublisher;
 import com.icaroerasmo.parsers.FfmpegCommandParser;
 import com.icaroerasmo.storage.FutureStorage;
-import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -19,17 +19,17 @@ import java.util.concurrent.Future;
 public class FfmpegRunner extends AbstractRunner {
 
     private final FutureStorage futureStorage;
-    private final TelegramUtil telegramUtil;
+    private final NotificationPublisher publisher;
     private final Utilities utilities;
 
     public FfmpegRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,
-            TelegramUtil telegramUtil,
+            NotificationPublisher publisher,
             Utilities utilities) {
         super(executorService);
         this.futureStorage = futureStorage;
-        this.telegramUtil = telegramUtil;
+        this.publisher = publisher;
         this.utilities = utilities;
     }
 
@@ -59,7 +59,7 @@ public class FfmpegRunner extends AbstractRunner {
                     futureStorage.put(camName, "errorLogsFuture", errorLogsFuture);
 
                     log.info("Cam {}: ffmpeg started.", camName);
-                    telegramUtil.sendMessage(MessagesEnum.CAM_STARTED, camName);
+                    publisher.publishText(MessagesEnum.CAM_STARTED, camName);
 
                     int exitCode = process.waitFor();
 
@@ -70,14 +70,14 @@ public class FfmpegRunner extends AbstractRunner {
                         throw new RuntimeException("Cam " + camName + ": ffmpeg execution failed with exit code " + exitCode);
                     }
                 } catch (InterruptedException e) {
-                    telegramUtil.sendMessage(MessagesEnum.CAM_STOPPED, camName);
+                    publisher.publishText(MessagesEnum.CAM_STOPPED, camName);
                     log.warn("Cam {}: Interrupted.", camName);
                     Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
                     int attemptNo = attempt + 1;
                     log.warn("Cam {}: Starting attempt number {} failed.", camName, attemptNo, e);
-                    telegramUtil.sendMessage(MessagesEnum.CAM_ATTEMPT_FAILED, camName, attemptNo);
+                    publisher.publishText(MessagesEnum.CAM_ATTEMPT_FAILED, camName, attemptNo);
                 } finally {
                     utilities.killProcess(process);
                 }
@@ -87,10 +87,10 @@ public class FfmpegRunner extends AbstractRunner {
                 if (!success && attempt >= maxRetries) {
                     attempt = 0;
                     log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in 5 minutes...", camName);
-                    telegramUtil.sendMessage(MessagesEnum.CAM_MAX_ATTEMPTS_REACHED, camName, maxRetries);
+                    publisher.publishText(MessagesEnum.CAM_MAX_ATTEMPTS_REACHED, camName, maxRetries);
                     Thread.sleep(300000);
                     log.info("Cam {}: Trying to run again after hibernation.", camName);
-                    telegramUtil.sendMessage(MessagesEnum.CAM_TRYING_TO_RUN_AFTER_HIBERNATION, camName);
+                    publisher.publishText(MessagesEnum.CAM_TRYING_TO_RUN_AFTER_HIBERNATION, camName);
                 }
             }
         return null;

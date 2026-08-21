@@ -1,10 +1,9 @@
 package com.icaroerasmo.runners;
 
+import com.icaroerasmo.messaging.NotificationPublisher;
 import com.icaroerasmo.parsers.RcloneDedupeCommandParser;
 import com.icaroerasmo.properties.RcloneProperties;
-import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
-import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
@@ -21,10 +20,9 @@ public class RcloneDedupeRunner extends RcloneRunner {
             ExecutorService executorService,
             FutureStorage futureStorage,
             RcloneProperties rcloneProperties,
-            TelegramProperties telegramProperties,
-            TelegramUtil telegramUtil,
+            NotificationPublisher publisher,
             Utilities utilities) {
-        super(executorService, futureStorage, telegramProperties, telegramUtil, utilities);
+        super(executorService, futureStorage, publisher, utilities);
         this.rcloneProperties = rcloneProperties;
     }
 

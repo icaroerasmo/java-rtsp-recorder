@@ -2,9 +2,14 @@ general:
   timezone: "America/Bahia" # default value is container locale
   locale: 'pt-BR' # default value is 'en-GB'
 
-telegram:
-  chat_id: '-1000000000000' # mandatory
-  bot_token: '0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3' # mandatory
+spring:
+  rabbitmq:
+    host: '${RABBITMQ_HOST:localhost}'
+    port: ${RABBITMQ_PORT:5672}
+    username: '${RABBITMQ_USERNAME:guest}'
+    password: '${RABBITMQ_PASSWORD:guest}'
+    publisher-confirm-type: correlated
+    publisher-returns: true
 
 rclone:
   config-location: '/app/config/rclone.conf' # default value is '/app/config/rclone.conf'

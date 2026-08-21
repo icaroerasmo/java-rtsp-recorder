@@ -1,11 +1,10 @@
 package com.icaroerasmo.runners;
 
+import com.icaroerasmo.messaging.NotificationPublisher;
 import com.icaroerasmo.parsers.RcloneDeleteCommandParser;
 import com.icaroerasmo.properties.RcloneProperties;
 import com.icaroerasmo.properties.StorageProperties;
-import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
-import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
@@ -23,11 +22,10 @@ public class RcloneDeleteRunner extends RcloneRunner {
             ExecutorService executorService,
             FutureStorage futureStorage,
             RcloneProperties rcloneProperties,
-            TelegramProperties telegramProperties,
-            TelegramUtil telegramUtil,
             StorageProperties storageProperties,
+            NotificationPublisher publisher,
             Utilities utilities) {
-        super(executorService, futureStorage, telegramProperties, telegramUtil, utilities);
+        super(executorService, futureStorage, publisher, utilities);
         this.storageProperties = storageProperties;
         this.rcloneProperties = rcloneProperties;
     }

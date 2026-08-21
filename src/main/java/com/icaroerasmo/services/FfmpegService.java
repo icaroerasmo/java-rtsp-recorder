@@ -1,6 +1,7 @@
 package com.icaroerasmo.services;
 
 import com.icaroerasmo.enums.MessagesEnum;
+import com.icaroerasmo.messaging.NotificationPublisher;
 import com.icaroerasmo.parsers.FfmpegCommandParser;
 import com.icaroerasmo.properties.JavaRtspProperties;
 import com.icaroerasmo.properties.RtspProperties;
@@ -9,7 +10,6 @@ import com.icaroerasmo.runners.FfmpegRunner;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.FfmpegUtil;
 import com.icaroerasmo.util.PropertiesUtil;
-import com.icaroerasmo.util.TelegramUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +37,7 @@ public class FfmpegService {
     private final PropertiesUtil propertiesUtil;
     private final FutureStorage futureStorage;
     private final FfmpegUtil ffmpegUtil;
-    private final TelegramUtil telegramUtil;
+    private final NotificationPublisher publisher;
 
     @SneakyThrows
     @PostConstruct
@@ -124,7 +124,7 @@ public class FfmpegService {
     private void ffmpegFutureSubmitter(Map.Entry<String, FfmpegCommandParser.FfmpegCommandParserBuilder> entry) {
 
         log.info("Camera {} initiating...", entry.getKey());
-        telegramUtil.sendMessage(MessagesEnum.CAM_INITIATING, entry.getKey());
+        publisher.publishText(MessagesEnum.CAM_INITIATING, entry.getKey());
 
         Future<Void> future = executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()));
         futureStorage.put(entry.getKey(), "main", future);

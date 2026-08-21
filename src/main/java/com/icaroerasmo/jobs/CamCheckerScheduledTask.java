@@ -6,8 +6,8 @@ import com.icaroerasmo.properties.RtspProperties;
 import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.services.FfmpegService;
 import com.icaroerasmo.storage.FutureStorage;
+import com.icaroerasmo.messaging.NotificationPublisher;
 import com.icaroerasmo.util.PropertiesUtil;
-import com.icaroerasmo.util.TelegramUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class CamCheckerScheduledTask {
 
-    private final TelegramUtil telegramUtil;
+    private final NotificationPublisher publisher;
     private final JavaRtspProperties javaRtspProperties;
     private final FutureStorage futureStorage;
     private final FfmpegService ffmpegService;
@@ -41,7 +41,7 @@ public class CamCheckerScheduledTask {
             // 1. Check if the Future is running
             if (!futureStorage.isRunning(camName)) {
                 log.warn("Cam {} is not running (future not active)...", camName);
-                telegramUtil.sendMessage(MessagesEnum.CAM_CHECKER_NOT_RUNNING, camName);
+                publisher.publishText(MessagesEnum.CAM_CHECKER_NOT_RUNNING, camName);
                 futureStorage.delete(camName);
                 ffmpegService.start(camName);
                 continue;
@@ -61,7 +61,7 @@ public class CamCheckerScheduledTask {
             if (segmentListAge > staleThresholdMs) {
                 log.warn("Cam {} is running but segment list was last updated {}ms ago (threshold: {}ms). Killing zombie and restarting...",
                         camName, segmentListAge, staleThresholdMs);
-                telegramUtil.sendMessage(MessagesEnum.CAM_CHECKER_NOT_RECORDING, camName);
+                publisher.publishText(MessagesEnum.CAM_CHECKER_NOT_RECORDING, camName);
 
                 Process zombieProcess = futureStorage.getProcess(camName);
                 if (zombieProcess != null) {
