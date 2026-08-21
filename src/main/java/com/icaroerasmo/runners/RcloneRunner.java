@@ -1,14 +1,10 @@
 package com.icaroerasmo.runners;
 
 import com.icaroerasmo.enums.MessagesEnum;
+import com.icaroerasmo.messaging.NotificationPublisher;
 import com.icaroerasmo.parsers.CommandParser;
-import com.icaroerasmo.properties.TelegramProperties;
 import com.icaroerasmo.storage.FutureStorage;
-import com.icaroerasmo.util.TelegramUtil;
 import com.icaroerasmo.util.Utilities;
-import com.pengrad.telegrambot.request.BaseRequest;
-import com.pengrad.telegrambot.request.SendDocument;
-import com.pengrad.telegrambot.request.SendMessage;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.util.Strings;
@@ -23,21 +19,18 @@ import java.util.concurrent.Future;
 public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunner {
 
     private final FutureStorage futureStorage;
-    private final TelegramProperties telegramProperties;
-    private final TelegramUtil telegramUtil;
+    private final NotificationPublisher publisher;
     private final Utilities utilities;
 
     public RcloneRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,
-            TelegramProperties telegramProperties,
-            TelegramUtil telegramUtil,
+            NotificationPublisher publisher,
             Utilities utilities
     ) {
         super(executorService);
         this.futureStorage = futureStorage;
-        this.telegramProperties = telegramProperties;
-        this.telegramUtil = telegramUtil;
+        this.publisher = publisher;
         this.utilities = utilities;
     }
 
@@ -95,21 +88,18 @@ public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunn
 
     @Override
     public void sendStartNotification(MessagesEnum message) {
-        // use TelegramUtil which handles translation and sending
-        telegramUtil.sendMessage(message, formattedDateForCaption(LocalDateTime.now()));
+        publisher.publishText(message, formattedDateForCaption(LocalDateTime.now()));
     }
 
     @Override
     public void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum) {
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
-            String combined = String.format("%s. %s",
-                    telegramUtil.getTranslation(messagesEnum, formattedDateForCaption(LocalDateTime.now())),
-                    telegramUtil.getTranslation(MessagesEnum.RCLONE_NO_LOGS));
-            telegramUtil.sendRawMessage(combined);
+            publisher.publishNoLogs(messagesEnum, formattedDateForCaption(LocalDateTime.now()));
         } else {
-            String caption = telegramUtil.getTranslation(messagesEnum, formattedDateForCaption(LocalDateTime.now()));
-            telegramUtil.sendDocument("log%s.log".formatted(formattedDateForLogName(LocalDateTime.now())),
-                    outputLogs.toString().getBytes(StandardCharsets.UTF_8), caption);
+            publisher.publishDocument(messagesEnum,
+                    "log%s.log".formatted(formattedDateForLogName(LocalDateTime.now())),
+                    outputLogs.toString().getBytes(StandardCharsets.UTF_8),
+                    formattedDateForCaption(LocalDateTime.now()));
         }
     }
 

@@ -10,6 +10,5 @@ import org.springframework.stereotype.Component;
 public class JavaRtspProperties {
     private final RtspProperties rtspProperties;
     private final StorageProperties storageProperties;
-    private final TelegramProperties telegramProperties;
     private final RcloneProperties rcloneProperties;
 }
