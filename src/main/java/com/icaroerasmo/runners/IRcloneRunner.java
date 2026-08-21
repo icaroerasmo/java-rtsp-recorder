@@ -15,8 +15,12 @@ public interface IRcloneRunner {
     void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum);
 
     default String formattedDateForCaption(LocalDateTime time) {
-        final String timeFormatPattern = " 'at' HH:mm:ss";
-        return dateTimeFormatter(timeFormatPattern, time);
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
+        return time.format(dateFormatter);
+    }
+
+    default String formattedTimeForCaption(LocalDateTime time) {
+        return time.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
     }
 
     default String formattedDateForLogName(LocalDateTime time) {
