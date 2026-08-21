@@ -88,18 +88,20 @@ public abstract class RcloneRunner extends AbstractRunner implements IRcloneRunn
 
     @Override
     public void sendStartNotification(MessagesEnum message) {
-        publisher.publishText(message, formattedDateForCaption(LocalDateTime.now()));
+        final LocalDateTime now = LocalDateTime.now();
+        publisher.publishText(message, formattedDateForCaption(now), formattedTimeForCaption(now));
     }
 
     @Override
     public void sendEndNotification(StringBuilder outputLogs, MessagesEnum messagesEnum) {
+        final LocalDateTime now = LocalDateTime.now();
         if(outputLogs == null || Strings.isBlank(outputLogs.toString())) {
-            publisher.publishNoLogs(messagesEnum, formattedDateForCaption(LocalDateTime.now()));
+            publisher.publishNoLogs(messagesEnum, formattedDateForCaption(now), formattedTimeForCaption(now));
         } else {
             publisher.publishDocument(messagesEnum,
-                    "log%s.log".formatted(formattedDateForLogName(LocalDateTime.now())),
+                    "log%s.log".formatted(formattedDateForLogName(now)),
                     outputLogs.toString().getBytes(StandardCharsets.UTF_8),
-                    formattedDateForCaption(LocalDateTime.now()));
+                    formattedDateForCaption(now), formattedTimeForCaption(now));
         }
     }
 
