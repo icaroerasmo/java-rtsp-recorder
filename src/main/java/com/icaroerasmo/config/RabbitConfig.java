@@ -13,9 +13,11 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.boot.autoconfigure.amqp.RabbitTemplateConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @Log4j2
 @Configuration
+@EnableAsync
 public class RabbitConfig {
 
     public static final String TELEGRAM_EXCHANGE = "telegram.exchange";
@@ -23,6 +25,17 @@ public class RabbitConfig {
     public static final String TELEGRAM_ROUTING_KEY = "telegram.notifications";
     public static final String TELEGRAM_DLX = "telegram.dlx";
     public static final String TELEGRAM_DLQ_ROUTING_KEY = "telegram.notifications.dlq";
+
+    @Bean(name = "taskExecutor")
+    public org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor taskExecutor() {
+        org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor e = new org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor();
+        e.setCorePoolSize(2);
+        e.setMaxPoolSize(8);
+        e.setQueueCapacity(200);
+        e.setThreadNamePrefix("async-publish-");
+        e.initialize();
+        return e;
+    }
 
     @Bean
     public DirectExchange telegramExchange() {
