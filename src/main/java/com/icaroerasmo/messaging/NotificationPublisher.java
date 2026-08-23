@@ -4,6 +4,7 @@ import com.icaroerasmo.enums.MessagesEnum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -21,14 +22,17 @@ public class NotificationPublisher {
 
     private final RabbitTemplate rabbitTemplate;
 
+    @Async
     public void publishText(MessagesEnum template, Object... args) {
         publish(template, NotificationMessage.MediaType.TEXT, null, null, false, args);
     }
 
+    @Async
     public void publishNoLogs(MessagesEnum template, Object... args) {
         publish(template, NotificationMessage.MediaType.TEXT, null, null, true, args);
     }
 
+    @Async
     public void publishDocument(MessagesEnum template, String filename, byte[] payload, Object... args) {
         publish(template, NotificationMessage.MediaType.DOCUMENT, filename, payload, false, args);
     }
