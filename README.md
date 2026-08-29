@@ -93,10 +93,6 @@ general:
   timezone: "America/Bahia" # default value is container locale
   locale: 'pt-BR' # default value is 'en-GB'
 
-telegram:
-  chat_id: '-1000000000000' # mandatory
-  bot_token: '0000000000:AAAbO1-dysu3daUTpjVEXX4Pwq-M9wrPT3' # mandatory
-
 rclone:
   config-location: '/app/config/rclone.conf' # default value is '/app/config/rclone.conf'
   delete-cron: '0 0 1 * * *' # default value is '0 0 0 * * *' (midnight)
