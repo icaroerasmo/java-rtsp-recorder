@@ -69,6 +69,8 @@ jobs:
           context: .
           file: ./dockerfile
           platforms: linux/amd64
+          build-args: |
+            TZ=America/Sao_Paulo
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ steps.extractVersion.outputs.version }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
           labels: ${{ steps.meta.outputs.labels }}
