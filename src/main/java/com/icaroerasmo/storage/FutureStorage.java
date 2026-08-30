@@ -46,10 +46,17 @@ public class FutureStorage {
         }
 
         if(threadName != null) {
-            threadMap.remove(threadName);
+            Future<?> future = threadMap.remove(threadName);
+            if (future != null) {
+                future.cancel(true);
+            }
             return;
         }
 
+        // Cancel all futures before removing so that any running task
+        // (e.g. the ffmpeg runner retry loop) is interrupted and stops
+        // spawning new processes.
+        threadMap.values().forEach(future -> future.cancel(true));
         threadMap.clear();
         threads.remove(name);
         processes.remove(name);

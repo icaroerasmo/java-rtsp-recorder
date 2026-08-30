@@ -74,10 +74,10 @@ public class FfmpegService {
     public void start(String camName) {
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
 
-        if(futureStorage.get(camName) != null) {
-            log.error("Camera {} already recording.", camName);
-            throw new RuntimeException("Camera " + camName + " is already recording.");
-        }
+        // Clean up any existing state for this camera before starting a fresh one.
+        // This guarantees the old ffmpeg process is killed and the old runner task
+        // is cancelled, so we never end up with multiple ffmpeg processes per camera.
+        stop(camName);
 
         rtspProperties.getCameras().stream().
                 filter(camera -> camera.getName().equals(camName)).
@@ -87,14 +87,20 @@ public class FfmpegService {
 
     public void stop(String camName) {
 
-        Map<String, Future<?>> futureMap =  futureStorage.get(camName);
-
-        if(futureMap == null) {
-            log.error("Camera {} not found", camName);
-            throw new RuntimeException("Camera " + camName + " is not recording.");
+        // Kill the running ffmpeg process first so the runner's waitFor() returns.
+        Process process = futureStorage.getProcess(camName);
+        if (process != null && process.isAlive()) {
+            log.warn("Cam {}: destroying existing process pid {}", camName, process.pid());
+            process.destroyForcibly();
         }
 
-        futureMap.keySet().forEach(futureName -> futureMap.get(futureName).cancel(true));
+        // Cancel the runner futures so the task is interrupted and stops its retry loop.
+        Map<String, Future<?>> futureMap = futureStorage.get(camName);
+        if (futureMap != null) {
+            futureMap.values().forEach(future -> future.cancel(true));
+        }
+
+        futureStorage.delete(camName);
     }
 
     @PreDestroy

@@ -43,6 +43,14 @@ public class FfmpegRunner extends AbstractRunner {
         boolean success = false;
 
             while (attempt < maxRetries && !success) {
+
+                // If this task was cancelled (e.g. the camera was restarted by the checker),
+                // stop immediately instead of spawning another ffmpeg process.
+                if (Thread.currentThread().isInterrupted()) {
+                    log.warn("Cam {}: Task interrupted, stopping retry loop.", camName);
+                    break;
+                }
+
                 Process process = null;
                 Future<StringBuilder> outputLogsFuture;
                 Future<StringBuilder> errorLogsFuture;
