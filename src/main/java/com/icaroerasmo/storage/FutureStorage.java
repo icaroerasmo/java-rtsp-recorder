@@ -11,9 +11,18 @@ public class FutureStorage {
 
     private final Map<String, Map<String, Future<?>>> threads = new ConcurrentHashMap<>();
     private final Map<String, Process> processes = new ConcurrentHashMap<>();
+    private final Map<String, Long> startTimes = new ConcurrentHashMap<>();
 
     public void put(String futureName, String threadName, Future<?> future) {
         threads.computeIfAbsent(futureName, k -> new ConcurrentHashMap<>()).put(threadName, future);
+    }
+
+    public void putStartTime(String name, long startTime) {
+        startTimes.put(name, startTime);
+    }
+
+    public long getStartTime(String name) {
+        return startTimes.getOrDefault(name, 0L);
     }
 
     public void putProcess(String name, Process process) {
@@ -60,6 +69,7 @@ public class FutureStorage {
         threadMap.clear();
         threads.remove(name);
         processes.remove(name);
+        startTimes.remove(name);
     }
 
     public boolean isRunning(String name) {
