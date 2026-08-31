@@ -58,6 +58,16 @@ public class CamCheckerScheduledTask {
                 continue;
             }
 
+            // Cooldown: give a freshly (re)started process time to complete its first
+            // segment before judging it stale. Without this, a stale segment list left
+            // over from a previous run makes the checker kill the new process every 60s
+            // before it can ever finish a segment, creating an unrecoverable restart loop.
+            long processAge = System.currentTimeMillis() - futureStorage.getStartTime(camName);
+            if (processAge < videoDurationMs) {
+                log.debug("Cam {}: process started {}ms ago (< {}ms), skipping staleness check", camName, processAge, videoDurationMs);
+                continue;
+            }
+
             if (segmentListAge > staleThresholdMs) {
                 log.warn("Cam {} is running but segment list was last updated {}ms ago (threshold: {}ms). Killing zombie and restarting...",
                         camName, segmentListAge, staleThresholdMs);

@@ -173,6 +173,27 @@ class FutureStorageTest {
     }
 
     @Test
+    void putAndGetStartTime() {
+        FutureStorage storage = new FutureStorage();
+
+        storage.putStartTime("cam1", 12345L);
+
+        assertEquals(12345L, storage.getStartTime("cam1"));
+        assertEquals(0L, storage.getStartTime("unknown"));
+    }
+
+    @Test
+    void deleteRemovesStartTime() {
+        FutureStorage storage = new FutureStorage();
+        storage.put("cam1", "main", new StubFuture(false, false));
+        storage.putStartTime("cam1", 12345L);
+
+        storage.delete("cam1");
+
+        assertEquals(0L, storage.getStartTime("cam1"));
+    }
+
+    @Test
     void storesMultipleThreadsUnderSameName() {
         FutureStorage storage = new FutureStorage();
         Future<?> a = new StubFuture(false, false);

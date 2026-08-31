@@ -134,6 +134,7 @@ public class FfmpegService {
 
         Future<Void> future = executorService.submit(() -> ffmpegRunner.run(entry.getKey(), entry.getValue()));
         futureStorage.put(entry.getKey(), "main", future);
+        futureStorage.putStartTime(entry.getKey(), System.currentTimeMillis());
 
     }
 }

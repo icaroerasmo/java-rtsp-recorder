@@ -34,6 +34,8 @@ class FfmpegCommandParserTest {
         List<String> expected = List.of(
                 "ffmpeg",
                 "-nostdin",
+                "-fflags",
+                "+genpts+discardcorrupt",
                 "-rtsp_transport",
                 "tcp",
                 "-timeout",
@@ -74,7 +76,7 @@ class FfmpegCommandParserTest {
     void buildsCommandStringJoinedBySpaces() {
         String command = fullCopyBuilder().build();
 
-        assertTrue(command.startsWith("ffmpeg -nostdin -rtsp_transport tcp"));
+        assertTrue(command.startsWith("ffmpeg -nostdin -fflags +genpts+discardcorrupt -rtsp_transport tcp"));
         assertTrue(command.contains(" -c copy "));
         assertTrue(command.endsWith(TMP_PATH + "/" + CAMERA_NAME + "%Y-%m-%d_%H-%M-%S.mkv"));
     }
@@ -88,7 +90,7 @@ class FfmpegCommandParserTest {
                 .transportProtocol(RtspProperties.TransportProtocol.UDP)
                 .buildAsList();
 
-        assertEquals("udp", command.get(3));
+        assertEquals("udp", command.get(command.indexOf("-rtsp_transport") + 1));
     }
 
     @Test
