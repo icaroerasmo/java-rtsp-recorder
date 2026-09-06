@@ -2,14 +2,13 @@ general:
   timezone: "America/Bahia" # default value is container locale
   locale: 'pt-BR' # default value is 'en-GB'
 
-spring:
-  rabbitmq:
-    host: '${RABBITMQ_HOST:localhost}'
-    port: ${RABBITMQ_PORT:5672}
-    username: '${RABBITMQ_USERNAME:guest}'
-    password: '${RABBITMQ_PASSWORD:guest}'
-    publisher-confirm-type: correlated
-    publisher-returns: true
+rabbitMq:
+  host: '${RABBITMQ_HOST:localhost}'
+  port: ${RABBITMQ_PORT:5672}
+  username: '${RABBITMQ_USERNAME:guest}'
+  password: '${RABBITMQ_PASSWORD:guest}'
+  publisher-confirm-type: correlated
+  publisher-returns: true
 
 rclone:
   config-location: '/app/config/rclone.conf' # default value is '/app/config/rclone.conf'
