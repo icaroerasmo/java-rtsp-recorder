@@ -64,6 +64,12 @@ public class FfmpegService {
 
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
 
+        // Remove stale done-segments lists left over from a previous run. The list is
+        // only rewritten when a segment completes, so a stale one would make the
+        // health checker think the new processes are zombies and kill them in a loop
+        // right before their first segment finishes, blocking recording forever.
+        rtspProperties.getCameras().forEach(camera -> deleteDoneSegmentsList(camera.getName()));
+
         rtspProperties.getCameras().stream().
                 map(this::parseCamInfo).
                 forEach(this::ffmpegFutureSubmitter);
@@ -79,10 +85,28 @@ public class FfmpegService {
         // is cancelled, so we never end up with multiple ffmpeg processes per camera.
         stop(camName);
 
+        // Same rationale as in init(): a stale done-segments list would keep the
+        // checker restarting this camera forever. Removing it gives the fresh ffmpeg
+        // process a clean baseline to rewrite once its first segment completes.
+        deleteDoneSegmentsList(camName);
+
         rtspProperties.getCameras().stream().
                 filter(camera -> camera.getName().equals(camName)).
                 map(this::parseCamInfo).
                 forEach(this::ffmpegFutureSubmitter);
+    }
+
+    private void deleteDoneSegmentsList(String camName) {
+        try {
+            final Path segmentsList = Paths.get(
+                    javaRtspProperties.getStorageProperties().getTmpFolder(),
+                    "." + camName + "_done_segments");
+            if (Files.deleteIfExists(segmentsList)) {
+                log.info("Cam {}: removed stale done-segments list from previous run.", camName);
+            }
+        } catch (Exception e) {
+            log.warn("Cam {}: could not remove stale done-segments list: {}", camName, e.getMessage());
+        }
     }
 
     public void stop(String camName) {
