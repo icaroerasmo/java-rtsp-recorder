@@ -37,53 +37,62 @@ public class CamCheckerScheduledTask {
 
         for (RtspProperties.Camera camera : rtspProperties.getCameras()) {
             String camName = camera.getName();
+            try {
+                checkCam(camName, storageProperties.getTmpFolder(), staleThresholdMs, videoDurationMs);
+            } catch (Exception e) {
+                log.error("Cam {}: unexpected error during health check. Isolating camera and continuing with others.", camName);
+                log.debug("Cam {}: unexpected error during health check", camName, e);
+            }
+        }
+    }
 
-            // 1. Check if the Future is running
-            if (!futureStorage.isRunning(camName)) {
-                log.warn("Cam {} is not running (future not active)...", camName);
-                publisher.publishText(MessagesEnum.CAM_CHECKER_NOT_RUNNING, camName);
-                futureStorage.delete(camName);
-                ffmpegService.start(camName);
-                continue;
+    private void checkCam(String camName, String tmpFolder, long staleThresholdMs, long videoDurationMs) {
+
+        // 1. Check if the Future is running
+        if (!futureStorage.isRunning(camName)) {
+            log.warn("Cam {} is not running (future not active)...", camName);
+            publisher.publishText(MessagesEnum.CAM_CHECKER_NOT_RUNNING, camName);
+            futureStorage.delete(camName);
+            ffmpegService.start(camName);
+            return;
+        }
+
+        // 2. Future is running — check if segmenter is actually producing segments
+        // The segment list file (.camName_done_segments) only updates when a segment completes,
+        // making it the true health indicator. The video file keeps getting written to even
+        // when the segmenter is stuck, so checking its lastModified is unreliable.
+        long segmentListAge = getSegmentListAge(camName, tmpFolder);
+
+        if (segmentListAge < 0) {
+            log.debug("Cam {}: no segment list found yet, skipping staleness check", camName);
+            return;
+        }
+
+        // Cooldown: give a freshly (re)started process time to complete its first
+        // segment before judging it stale. Without this, a stale segment list left
+        // over from a previous run makes the checker kill the new process every 60s
+        // before it can ever finish a segment, creating an unrecoverable restart loop.
+        long processAge = System.currentTimeMillis() - futureStorage.getStartTime(camName);
+        if (processAge < videoDurationMs) {
+            log.debug("Cam {}: process started {}ms ago (< {}ms), skipping staleness check", camName, processAge, videoDurationMs);
+            return;
+        }
+
+        if (segmentListAge > staleThresholdMs) {
+            log.warn("Cam {} is running but segment list was last updated {}ms ago (threshold: {}ms). Killing zombie and restarting...",
+                    camName, segmentListAge, staleThresholdMs);
+            publisher.publishText(MessagesEnum.CAM_CHECKER_NOT_RECORDING, camName);
+
+            Process zombieProcess = futureStorage.getProcess(camName);
+            if (zombieProcess != null) {
+                log.warn("Cam {}: destroying zombie process pid {}", camName, zombieProcess.pid());
+                zombieProcess.destroyForcibly();
             }
 
-            // 2. Future is running — check if segmenter is actually producing segments
-            // The segment list file (.camName_done_segments) only updates when a segment completes,
-            // making it the true health indicator. The video file keeps getting written to even
-            // when the segmenter is stuck, so checking its lastModified is unreliable.
-            long segmentListAge = getSegmentListAge(camName, storageProperties.getTmpFolder());
-
-            if (segmentListAge < 0) {
-                log.debug("Cam {}: no segment list found yet, skipping staleness check", camName);
-                continue;
-            }
-
-            // Cooldown: give a freshly (re)started process time to complete its first
-            // segment before judging it stale. Without this, a stale segment list left
-            // over from a previous run makes the checker kill the new process every 60s
-            // before it can ever finish a segment, creating an unrecoverable restart loop.
-            long processAge = System.currentTimeMillis() - futureStorage.getStartTime(camName);
-            if (processAge < videoDurationMs) {
-                log.debug("Cam {}: process started {}ms ago (< {}ms), skipping staleness check", camName, processAge, videoDurationMs);
-                continue;
-            }
-
-            if (segmentListAge > staleThresholdMs) {
-                log.warn("Cam {} is running but segment list was last updated {}ms ago (threshold: {}ms). Killing zombie and restarting...",
-                        camName, segmentListAge, staleThresholdMs);
-                publisher.publishText(MessagesEnum.CAM_CHECKER_NOT_RECORDING, camName);
-
-                Process zombieProcess = futureStorage.getProcess(camName);
-                if (zombieProcess != null) {
-                    log.warn("Cam {}: destroying zombie process pid {}", camName, zombieProcess.pid());
-                    zombieProcess.destroyForcibly();
-                }
-
-                futureStorage.delete(camName);
-                ffmpegService.start(camName);
-            } else {
-                log.debug("Cam {}: segment list updated {}ms ago — healthy", camName, segmentListAge);
-            }
+            futureStorage.delete(camName);
+            ffmpegService.start(camName);
+        } else {
+            log.debug("Cam {}: segment list updated {}ms ago — healthy", camName, segmentListAge);
         }
     }
 

@@ -9,7 +9,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,7 +26,7 @@ public class FileMoverScheduledTask {
             "#{@propertiesUtil.durationParser(" +
             "@storageProperties.fileMoverInterval, " +
             "T(java.util.concurrent.TimeUnit).MILLISECONDS)}")
-    private void filesMover() {
+    public void filesMover() {
 
         log.info("Started job to move files to records folder");
 
@@ -39,6 +38,11 @@ public class FileMoverScheduledTask {
             final Path segmentsFile = tmpFolder.resolve(".%s_done_segments".formatted(cam.getName()));
             try {
 
+                if (!Files.exists(segmentsFile)) {
+                    log.warn("Cam {} has no done segments file yet. Skipping.", cam.getName());
+                    return;
+                }
+
                 List<String> fileList = Files.readAllLines(segmentsFile);
 
                 if(fileList.isEmpty()) {
@@ -47,8 +51,9 @@ public class FileMoverScheduledTask {
 
                 ffmpegUtil.moveFilesToRecordsFolder(fileList);
 
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                log.error("Error moving files for cam {}: {}", cam.getName(), e.getMessage());
+                log.debug("Error moving files for cam {}", cam.getName(), e);
             }
         });
 
