@@ -64,86 +64,6 @@ public class FfmpegUtil {
         return dateMap;
     }
 
-    private void deleteFilesFromIndex(Long saveUpTo) {
-        log.info("Deleting files from index");
-
-        final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
-        final Path indexFile = recordsFolder.resolve(INDEX);
-
-        List<String> fileList;
-
-        try {
-            indexFileLock.lock();
-            fileList = Files.readAllLines(indexFile);
-        } catch(Exception e) {
-            log.error("Error reading index file: {}", e.getMessage());
-            log.debug("Error reading index file: {}", e.getMessage(), e);
-            indexFileLock.unlock();
-            return;
-        }
-
-        if(fileList.isEmpty()) {
-            log.info("Index file is empty");
-            indexFileLock.unlock();
-            return;
-        }
-
-        int index = 0;
-        long sum = 0;
-
-        List<Path> filesToDelete = new ArrayList<>();
-
-        while(sum <= saveUpTo && index < fileList.size()) {
-
-            final String fileRecord = fileList.get(index++);
-
-            try {
-                log.info("Capturing data from index to be deleted: {}", fileRecord);
-                String[] fileData = fileRecord.split(",");
-                Path filePath = Paths.get(fileData[0]);
-                sum += Long.parseLong(fileData[1]);
-                filesToDelete.add(filePath);
-                log.info("File deleted from index successfully: {}", filePath);
-            } catch (Exception e) {
-                log.error("Error capturing file from index to be deleted: {}. Line: {}", e.getMessage(), fileRecord);
-                log.debug("Error capturing file from index to be deleted: {}. Line: {}", e.getMessage(), fileRecord, e);
-            }
-        }
-
-        filesToDelete.stream().parallel().forEach(file -> {
-            try {
-                Files.deleteIfExists(file);
-            } catch (IOException e) {
-                log.error("Error deleting file from index: {}", e.getMessage());
-                log.debug("Error deleting file from index: {}", e.getMessage(), e);
-            }
-        });
-
-        try {
-
-            // Creates tmp file
-            final Path tmpFile = generateTmpPath(indexFile);
-
-            if(indexFile.toFile().exists()) {
-                Files.copy(indexFile, tmpFile, StandardCopyOption.REPLACE_EXISTING);
-            }
-
-            // Write new file list to tmp file
-            Files.write(tmpFile, fileList.subList(index, fileList.size()));
-
-            // Replace original index file with new one
-            Files.copy(tmpFile, indexFile, StandardCopyOption.REPLACE_EXISTING);
-
-        } catch (Exception e) {
-            log.error("Error rewriting files to index: {}", e.getMessage());
-            log.debug("Error rewriting files to index: {}", e.getMessage(), e);
-        }
-
-        indexFileLock.unlock();
-
-        log.info("Done deleting files from index");
-    }
-
     public void deleteEmptyFolders(Path files) {
         log.info("Deleting empty folders");
         deleteEmptyFoldersRecursively(Stream.of(files));
@@ -205,7 +125,11 @@ public class FfmpegUtil {
             long probableSize = sizeOfFolder + sizeOfFile;
 
             if(probableSize > maxFolderSizeInBytes) {
-                deleteFilesFromIndex(probableSize-maxFolderSizeInBytes);
+                log.warn("Records folder size ({}) exceeds configured max records folder size ({}). " +
+                                "Skipping deletion to avoid removing not-yet-uploaded segments; " +
+                                "local retention is handled by the daily delete-old-files job. " +
+                                "Moving file: {}",
+                        probableSize, storageProperties.getMaxRecordsFolderSize(), originPath);
             }
 
             String indexLine;
