@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.Map;
 
@@ -89,23 +90,34 @@ class FfmpegUtilTest {
     }
 
     @Test
-    void doesNotDeleteExistingRecordsWhenFolderExceedsMaxSize(@TempDir Path tempDir) throws IOException {
+    void deletesOldestExistingRecordsWhenFolderExceedsMaxSize(@TempDir Path tempDir) throws IOException {
         Path tmp = Files.createDirectories(tempDir.resolve("tmp"));
         Path records = Files.createDirectories(tempDir.resolve("records"));
 
-        Path preExisting = Files.write(records.resolve("old_file.mkv"), new byte[4096]);
-        Files.write(tmp.resolve("cam1_2024-05-20_14-30-10.mkv"), new byte[10]);
+        Path oldest = Files.write(records.resolve("old_2024-05-20_14-00-00.mkv"), new byte[2048]);
+        Files.setLastModifiedTime(oldest, FileTime.fromMillis(0L));
+        Path newest = Files.write(records.resolve("new_2024-05-20_14-00-01.mkv"), new byte[1024]);
+        Files.setLastModifiedTime(newest, FileTime.fromMillis(60_000L));
+
+        Files.write(tmp.resolve("cam1_2024-05-20_14-30-10.mkv"), new byte[1024]);
 
         StorageProperties storageProperties = new StorageProperties();
         storageProperties.setTmpFolder(tmp.toString());
         storageProperties.setRecordsFolder(records.toString());
-        storageProperties.setMaxRecordsFolderSize("1KB");
+        storageProperties.setMaxRecordsFolderSize("3KB");
 
         FfmpegUtil ffmpegUtil = new FfmpegUtil(storageProperties, new PropertiesUtil());
         ffmpegUtil.moveFilesToRecordsFolder(List.of("cam1_2024-05-20_14-30-10.mkv"));
 
-        assertTrue(Files.exists(preExisting),
-                "Mover must not delete existing records even when folder exceeds the max size");
-        assertFalse(Files.exists(tmp.resolve("cam1_2024-05-20_14-30-10.mkv")));
+        assertFalse(Files.exists(oldest),
+                "Oldest records must be deleted to comply with max records folder size");
+        assertTrue(Files.exists(newest),
+                "Newest existing records must be kept when deleting above the cap");
+        assertFalse(Files.exists(tmp.resolve("cam1_2024-05-20_14-30-10.mkv")),
+                "Moved file must leave the tmp folder");
+        assertTrue(propertiesUtil.sizeOfFile(records) <= 3072L,
+                "Records folder must comply with max records folder size after deletion");
     }
+
+    private final PropertiesUtil propertiesUtil = new PropertiesUtil();
 }

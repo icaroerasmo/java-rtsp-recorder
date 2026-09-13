@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Log4j2
@@ -90,6 +91,52 @@ public class FfmpegUtil {
         }
     }
 
+    private void deleteOldestFiles(Path recordsFolder, long maxFolderSizeInBytes) {
+
+        indexFileLock.lock();
+
+        List<Path> filesByLastModified;
+
+        try(Stream<Path> fileStream = Files.walk(recordsFolder)) {
+            filesByLastModified = fileStream.
+                    filter(Files::isRegularFile).
+                    filter(file -> !file.getFileName().toString().startsWith(".")).
+                    sorted(Comparator.comparingLong(this::lastModifiedMillis)).
+                    collect(Collectors.toList());
+        } catch (IOException e) {
+            log.error("Error listing records folder to delete oldest files: {}", e.getMessage());
+            indexFileLock.unlock();
+            return;
+        }
+
+        long totalSize = propertiesUtil.sizeOfFile(recordsFolder);
+
+        try {
+            for(Path file : filesByLastModified) {
+                if(totalSize <= maxFolderSizeInBytes) {
+                    break;
+                }
+                long size = propertiesUtil.sizeOfFile(file);
+                if(Files.deleteIfExists(file)) {
+                    totalSize -= size;
+                    log.info("Deleted oldest file to comply with max records folder size: {}", file);
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error deleting oldest file: {}", e.getMessage());
+        } finally {
+            indexFileLock.unlock();
+        }
+    }
+
+    private long lastModifiedMillis(Path path) {
+        try {
+            return path.toFile().lastModified();
+        } catch (Exception e) {
+            return Long.MAX_VALUE;
+        }
+    }
+
     public void moveFilesToRecordsFolder(List<String> fileNames) {
 
         log.info("Moving files to records folder");
@@ -123,14 +170,6 @@ public class FfmpegUtil {
             long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
             long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
             long probableSize = sizeOfFolder + sizeOfFile;
-
-            if(probableSize > maxFolderSizeInBytes) {
-                log.warn("Records folder size ({}) exceeds configured max records folder size ({}). " +
-                                "Skipping deletion to avoid removing not-yet-uploaded segments; " +
-                                "local retention is handled by the daily delete-old-files job. " +
-                                "Moving file: {}",
-                        probableSize, storageProperties.getMaxRecordsFolderSize(), originPath);
-            }
 
             String indexLine;
 
@@ -174,6 +213,9 @@ public class FfmpegUtil {
 
             if(success) {
                 log.info("File {} moved successfully.", entry.getKey());
+                if(probableSize > maxFolderSizeInBytes) {
+                    deleteOldestFiles(recordsFolder, maxFolderSizeInBytes);
+                }
             } else {
                 log.error("Error when trying to move file: {}.", entry.getKey());
             }
