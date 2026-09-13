@@ -32,6 +32,16 @@ public class NotificationPublisher {
         publish(template, NotificationMessage.MediaType.TEXT, null, null, true, args);
     }
 
+    /**
+     * Publishes synchronously, bypassing the async executor. Called during application
+     * shutdown, when the async pool is already being torn down; relying on the @Async
+     * publish would drop the message (the taskExecutor is shut down before the RabbitMQ
+     * connection closes).
+     */
+    public void publishTextSynchronous(MessagesEnum template, Object... args) {
+        publish(template, NotificationMessage.MediaType.TEXT, null, null, false, args);
+    }
+
     @Async
     public void publishDocument(MessagesEnum template, String filename, byte[] payload, Object... args) {
         publish(template, NotificationMessage.MediaType.DOCUMENT, filename, payload, false, args);
