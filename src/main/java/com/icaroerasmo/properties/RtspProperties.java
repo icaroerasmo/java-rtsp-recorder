@@ -15,6 +15,9 @@ public class RtspProperties implements ConfigYaml {
     private String videoDuration = "5m";
     private HardwareAcceleration hardwareAcceleration = HardwareAcceleration.COPY;
     private String vaapiDevice = "/dev/dri/renderD128";
+    private int maxRetries = 3;
+    private String retryWait = "5m";
+    private String binaryPath = "ffmpeg";
     private List<Camera> cameras;
 
     @Data

@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+#
+# Fake ffmpeg used by unit tests to simulate the segmenting behavior of the
+# real ffmpeg binary without depending on it being installed on the host.
+#
+# It understands the command shape produced by FfmpegCommandParser.buildAsList():
+#   ... -segment_list <tmpPath>/.<camName>_done_segments ... <tmpPath>/<camName>%Y-%m-%d_%H-%M-%S.mkv
+#
+# Behavior is controlled by small control files placed in the tmp directory by the
+# test (cleanest because ProcessBuilder inherits the JVM env, so per-process env
+# vars cannot be injected from tests):
+#
+#   .fake-ffmpeg-mode          mode file (default "ok-exit"):
+#     ok-exit                  write segments + done_segments list, then exit 0
+#     exit-fail                exit 1 immediately (offline camera / connection failure)
+#     fail-then-ok             fail N times (N=.fake-ffmpeg-failures) then behave like ok-exit
+#     crash                    write some segments, then exit 1 (ffmpeg dying mid-recording)
+#     record                   write MAX segments then sleep forever, like a live recording
+#     hang                     write empty done_segments list, then sleep forever (zombie)
+#   .fake-ffmpeg-segments      how many segments in ok-exit/fail-then-ok/crash (default 2)
+#   .fake-ffmpeg-failures      failures before succeeding in fail-then-ok (default 1)
+#   .fake-ffmpeg-max-segments  ceiling for record mode (default 5)
+#   .fake-ffmpeg-write-interval-ms sleep between segment writes (default 0)
+#
+# Control files can be scoped per camera by prefixing the camera name:
+#   .fake-ffmpeg-<camName>-mode, .fake-ffmpeg-<camName>-failures, ...
+#
+# Env var overrides remain available for manual runs:
+#   FAKE_FFMPEG_MODE, FAKE_FFMPEG_SEGMENTS, FAKE_FFMPEG_MAX_SEGMENTS,
+#   FAKE_FFMPEG_WRITE_INTERVAL_MS, FAKE_FFMPEG_FAILURES
+#
+set -u
+
+# On SIGTERM/SIGINT (e.g. runner killing the process), reap our sleep children so
+# no orphans are left lingering between test runs.
+trap '[ -n "$(jobs -p)" ] && kill $(jobs -p) 2>/dev/null' TERM INT
+
+segment_list=""
+output_pattern=""
+
+prev=""
+for arg in "$@"; do
+  if [ "$prev" = "-segment_list" ]; then
+    segment_list="$arg"
+  fi
+  prev="$arg"
+done
+output_pattern="${!#}"
+
+tmp_path=""
+cam_name=""
+if [ -n "$output_pattern" ]; then
+  tmp_path="$(dirname "$output_pattern")"
+  base="$(basename "$output_pattern")"
+  cam_name="${base%%%*}"
+fi
+
+read_ctl() {
+  local name="$1"
+  local env_fallback="$2"
+  local default="$3"
+  local cam_file="$tmp_path/.fake-ffmpeg-${cam_name}-$name"
+  local global_file="$tmp_path/.fake-ffmpeg-$name"
+  if [ -n "$cam_name" ] && [ -f "$cam_file" ]; then
+    cat "$cam_file"
+  elif [ -f "$global_file" ]; then
+    cat "$global_file"
+  elif [ -n "${!env_fallback:-}" ]; then
+    echo "${!env_fallback}"
+  else
+    echo "$default"
+  fi
+}
+
+MODE="$(read_ctl mode FAKE_FFMPEG_MODE ok-exit)"
+SEGMENTS="$(read_ctl segments FAKE_FFMPEG_SEGMENTS 2)"
+MAX_SEGMENTS="$(read_ctl max-segments FAKE_FFMPEG_MAX_SEGMENTS 5)"
+WRITE_INTERVAL_MS="$(read_ctl write-interval-ms FAKE_FFMPEG_WRITE_INTERVAL_MS 0)"
+FAILURES="$(read_ctl failures FAKE_FFMPEG_FAILURES 1)"
+GLOBAL_COUNTER_FILE="$tmp_path/.fake-ffmpeg-global-counter"
+
+echo "fake ffmpeg: mode=$MODE cam=$cam_name tmp=$tmp_path segment_list=$segment_list" >&2
+
+if [ "$MODE" = "exit-fail" ]; then
+  echo "fake ffmpeg: input/output error (simulated offline camera)" >&2
+  exit 1
+fi
+
+if [ "$MODE" = "hang" ]; then
+  : > "$segment_list"
+  # Replace the shell so the process itself is 'sleep' and dies cleanly on kill.
+  exec sleep 1000000
+fi
+
+write_segment() {
+  local now_epoch i ts seg
+  if [ -z "$segment_list" ] || [ -z "$tmp_path" ] || [ -z "$cam_name" ]; then
+    return 0
+  fi
+  now_epoch="$(date +%s)"
+  i=1
+  while [ "$i" -le "$SEGMENTS" ]; do
+    ts="$(date -u -d "@$((now_epoch + i - 1))" "+%Y-%m-%d_%H-%M-%S")"
+    seg="${cam_name}${ts}.mkv"
+    dd if=/dev/urandom of="$tmp_path/$seg" bs=1024 count=1 2>/dev/null
+    echo "$seg" >> "$segment_list"
+    if [ "$WRITE_INTERVAL_MS" -gt 0 ]; then
+      sleep "$(awk -v ms="$WRITE_INTERVAL_MS" 'BEGIN { print ms/1000 }')"
+    fi
+    i=$((i + 1))
+  done
+  return 0
+}
+
+if [ "$MODE" = "fail-then-ok" ]; then
+  count=0
+  if [ -f "$GLOBAL_COUNTER_FILE" ]; then
+    count="$(cat "$GLOBAL_COUNTER_FILE")"
+  fi
+  count=$((count + 1))
+  echo "$count" > "$GLOBAL_COUNTER_FILE"
+  if [ "$count" -le "$FAILURES" ]; then
+    echo "fake ffmpeg: simulated failure $count of $FAILURES" >&2
+    exit 1
+  fi
+fi
+
+if [ "$MODE" = "crash" ]; then
+  : > "$segment_list"
+  write_segment
+  echo "fake ffmpeg: crashed after writing segments" >&2
+  exit 1
+fi
+
+if [ "$MODE" = "record" ]; then
+  : > "$segment_list"
+  # Each process gets a unique base offset so restarts never collide on seg names
+  offset=0
+  if [ -f "$GLOBAL_COUNTER_FILE" ]; then
+    offset="$(cat "$GLOBAL_COUNTER_FILE")"
+  fi
+  offset=$((offset + 1))
+  echo "$offset" > "$GLOBAL_COUNTER_FILE"
+
+  now_epoch="$(date +%s)"
+  base=$((now_epoch - 120 - (offset * 100)))
+  written=0
+  while [ "$written" -lt "$MAX_SEGMENTS" ]; do
+    ts="$(date -u -d "@$((base + written))" "+%Y-%m-%d_%H-%M-%S")"
+    seg="${cam_name}${ts}.mkv"
+    dd if=/dev/urandom of="$tmp_path/$seg" bs=1024 count=1 2>/dev/null
+    echo "$seg" >> "$segment_list"
+    written=$((written + 1))
+    if [ "$WRITE_INTERVAL_MS" -gt 0 ]; then
+      sleep "$(awk -v ms="$WRITE_INTERVAL_MS" 'BEGIN { print ms/1000 }')"
+    fi
+  done
+  # stay alive, simulating a long-running recording
+  exec sleep 1000000
+fi
+
+# ok-exit (default)
+: > "$segment_list"
+write_segment
+exit 0

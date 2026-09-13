@@ -35,6 +35,9 @@ rtsp:
   video-duration: 5m # default value is 5 minutes
   hardware-acceleration: 'copy' # valid values: 'copy', 'cpu', 'nvidia', 'radeon' ('none' is accepted as a legacy alias for 'copy')
   vaapi-device: '/dev/dri/renderD128' # default Radeon/VAAPI render node
+  max-retries: 3 # default value is 3. Number of immediate retries before hibernating
+  retry-wait: 5m # default value is 5 minutes. Hibernation period between retry batches
+  binary-path: 'ffmpeg' # default value is 'ffmpeg'. Path to the ffmpeg executable (custom binary for testing)
   cameras: # mandatory. List of cameras to record
     - name: 'porta'
       host: '192.168.0.1'

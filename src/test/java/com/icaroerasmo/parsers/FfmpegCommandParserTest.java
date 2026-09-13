@@ -15,7 +15,36 @@ class FfmpegCommandParserTest {
     private static final String TMP_PATH = "/tmp/records";
     private static final String CAMERA_NAME = "cam1";
 
-    private FfmpegCommandParser.FfmpegCommandParserBuilder fullCopyBuilder() {
+    @Test
+    void usesConfiguredBinaryPathAndRetryParams() {
+        FfmpegCommandParser.FfmpegCommandParserBuilder builder = FfmpegCommandParser.builder()
+                .url(URL)
+                .tmpPath(TMP_PATH)
+                .cameraName(CAMERA_NAME)
+                .transportProtocol(RtspProperties.TransportProtocol.TCP)
+                .binaryPath("/usr/local/bin/fake-ffmpeg")
+                .maxRetries(7)
+                .retryWait("1m30s");
+
+        assertEquals("/usr/local/bin/fake-ffmpeg", builder.buildAsList().get(0));
+        assertEquals(7, builder.getMaxRetries());
+        assertEquals(90_000L, builder.getRetryWaitMs());
+    }
+
+    @Test
+    void retryParamsDefaultWhenUnset() {
+        FfmpegCommandParser.FfmpegCommandParserBuilder builder = FfmpegCommandParser.builder()
+                .url(URL)
+                .tmpPath(TMP_PATH)
+                .cameraName(CAMERA_NAME)
+                .transportProtocol(RtspProperties.TransportProtocol.TCP);
+
+        assertEquals("ffmpeg", builder.buildAsList().get(0));
+        assertEquals(3, builder.getMaxRetries());
+        assertEquals(300_000L, builder.getRetryWaitMs());
+    }
+
+    private static FfmpegCommandParser.FfmpegCommandParserBuilder fullCopyBuilder() {
         return FfmpegCommandParser.builder()
                 .url(URL)
                 .tmpPath(TMP_PATH)

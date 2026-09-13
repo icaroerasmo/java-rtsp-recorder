@@ -20,6 +20,9 @@ public class FfmpegCommandParser implements CommandParser {
     private String cameraName;
     private RtspProperties.HardwareAcceleration hardwareAcceleration;
     private String vaapiDevice;
+    private String binaryPath;
+    private Integer maxRetries;
+    private String retryWait;
 
     public static FfmpegCommandParserBuilder builder() {
         return new FfmpegCommandParserBuilder();
@@ -83,6 +86,31 @@ public class FfmpegCommandParser implements CommandParser {
             return this;
         }
 
+        public FfmpegCommandParserBuilder binaryPath(String binaryPath) {
+            ffmpegCommandParser.setBinaryPath(binaryPath);
+            return this;
+        }
+
+        public FfmpegCommandParserBuilder maxRetries(Integer maxRetries) {
+            ffmpegCommandParser.setMaxRetries(maxRetries);
+            return this;
+        }
+
+        public FfmpegCommandParserBuilder retryWait(String retryWait) {
+            ffmpegCommandParser.setRetryWait(retryWait);
+            return this;
+        }
+
+        public int getMaxRetries() {
+            return ffmpegCommandParser.getMaxRetries() != null ? ffmpegCommandParser.getMaxRetries() : 3;
+        }
+
+        public long getRetryWaitMs() {
+            final String retryWait = ffmpegCommandParser.getRetryWait() != null ?
+                    ffmpegCommandParser.getRetryWait() : "5m";
+            return Long.parseLong(propertiesUtil.durationParser(retryWait, TimeUnit.MILLISECONDS));
+        }
+
         @Override
         public List<String> buildAsList() {
             if (ffmpegCommandParser.getUrl() == null || ffmpegCommandParser.getUrl().isBlank()) {
@@ -98,7 +126,8 @@ public class FfmpegCommandParser implements CommandParser {
             }
 
             List<String> command = new ArrayList<>();
-            command.add("ffmpeg");
+            command.add(ffmpegCommandParser.getBinaryPath() != null ?
+                    ffmpegCommandParser.getBinaryPath() : "ffmpeg");
             command.add("-nostdin");
             command.add("-fflags");
             command.add("+genpts+discardcorrupt");

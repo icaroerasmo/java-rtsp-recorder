@@ -17,6 +17,9 @@ class PropertiesDefaultsTest {
         assertEquals("5m", props.getVideoDuration());
         assertEquals(RtspProperties.HardwareAcceleration.COPY, props.getHardwareAcceleration());
         assertEquals("/dev/dri/renderD128", props.getVaapiDevice());
+        assertEquals(3, props.getMaxRetries());
+        assertEquals("5m", props.getRetryWait());
+        assertEquals("ffmpeg", props.getBinaryPath());
         assertNull(props.getCameras());
     }
 
