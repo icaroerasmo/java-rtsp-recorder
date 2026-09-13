@@ -1,11 +1,13 @@
 package com.icaroerasmo.util;
 
+import com.icaroerasmo.properties.StorageProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -84,5 +86,26 @@ class FfmpegUtilTest {
         ffmpegUtil.deleteEmptyFolders(tempDir);
 
         assertTrue(Files.exists(dirWithFile));
+    }
+
+    @Test
+    void doesNotDeleteExistingRecordsWhenFolderExceedsMaxSize(@TempDir Path tempDir) throws IOException {
+        Path tmp = Files.createDirectories(tempDir.resolve("tmp"));
+        Path records = Files.createDirectories(tempDir.resolve("records"));
+
+        Path preExisting = Files.write(records.resolve("old_file.mkv"), new byte[4096]);
+        Files.write(tmp.resolve("cam1_2024-05-20_14-30-10.mkv"), new byte[10]);
+
+        StorageProperties storageProperties = new StorageProperties();
+        storageProperties.setTmpFolder(tmp.toString());
+        storageProperties.setRecordsFolder(records.toString());
+        storageProperties.setMaxRecordsFolderSize("1KB");
+
+        FfmpegUtil ffmpegUtil = new FfmpegUtil(storageProperties, new PropertiesUtil());
+        ffmpegUtil.moveFilesToRecordsFolder(List.of("cam1_2024-05-20_14-30-10.mkv"));
+
+        assertTrue(Files.exists(preExisting),
+                "Mover must not delete existing records even when folder exceeds the max size");
+        assertFalse(Files.exists(tmp.resolve("cam1_2024-05-20_14-30-10.mkv")));
     }
 }
