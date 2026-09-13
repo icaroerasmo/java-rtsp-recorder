@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -165,6 +166,35 @@ class FfmpegServicePipelineTest {
         assertTrue(publisher.contained("camC", MessagesEnum.CAM_INITIATING));
         Process restarted = awaitAliveProcess("camC");
         assertNotEquals(firstPid, restarted.pid());
+    }
+
+    @Test
+    void staleDoneSegmentsFromPreviousRunIsRemovedOnInitAndOnRestart() throws Exception {
+        cameras = List.of(camera("camC"));
+        rtspProperties.setCameras(cameras);
+        FakeFfmpeg.setMode(tmpFolder, "camC", "record");
+
+        // Simulate a previous run that ended abruptly (e.g. a power outage): a stale
+        // done-segments list from the old run is left behind. A stale list is only
+        // rewritten when a segment completes, so the health checker would keep killing
+        // the fresh process before its first segment finishes — blocking recording forever.
+        Path staleSegments = tmpFolder.resolve(".camC_done_segments");
+        Files.writeString(staleSegments, "camC2024-01-01_00-00-00.mkv\n");
+
+        service.init();
+
+        // init() must have removed the stale list so the new process starts with a clean baseline.
+        assertFalse(Files.exists(staleSegments));
+        awaitTrue(() -> publisher.contained("camC", MessagesEnum.CAM_STARTED), 15000);
+
+        // A restart (checker killing a zombie) must also remove the stale list before
+        // respawning; the fresh process then rewrites it once its first segment completes.
+        Path liveSegments = tmpFolder.resolve(".camC_done_segments");
+        awaitTrue(() -> tryCall(() -> Files.exists(liveSegments)), 15000);
+
+        service.start("camC");
+        assertFalse(Files.exists(liveSegments));
+        awaitTrue(() -> tryCall(() -> Files.exists(liveSegments)), 15000);
     }
 
     private boolean allSegmentsFreshAndExist(String camName) throws IOException {
