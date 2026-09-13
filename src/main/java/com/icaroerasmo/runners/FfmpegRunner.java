@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 @Log4j2
 @Getter
@@ -38,7 +39,8 @@ public class FfmpegRunner extends AbstractRunner {
 
         log.info("Cam {}: Running command: {}", camName, command.build());
 
-        final int maxRetries = 3;
+        final int maxRetries = command.getMaxRetries();
+        long retryWaitMs = command.getRetryWaitMs();
         int attempt = 0;
         boolean success = false;
 
@@ -94,9 +96,10 @@ public class FfmpegRunner extends AbstractRunner {
 
                 if (!success && attempt >= maxRetries) {
                     attempt = 0;
-                    log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in 5 minutes...", camName);
+                    log.error("Cam {}: ffmpeg execution failed after " + maxRetries + " attempts. Retrying in " +
+                            TimeUnit.MILLISECONDS.toMinutes(retryWaitMs) + " minutes...", camName);
                     publisher.publishText(MessagesEnum.CAM_MAX_ATTEMPTS_REACHED, camName, maxRetries);
-                    Thread.sleep(300000);
+                    Thread.sleep(retryWaitMs);
                     log.info("Cam {}: Trying to run again after hibernation.", camName);
                     publisher.publishText(MessagesEnum.CAM_TRYING_TO_RUN_AFTER_HIBERNATION, camName);
                 }

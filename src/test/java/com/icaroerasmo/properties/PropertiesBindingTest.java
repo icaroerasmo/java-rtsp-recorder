@@ -31,17 +31,20 @@ class PropertiesBindingTest {
     void bindsRtspProperties() {
         RtspProperties props = new RtspProperties();
 
-        Map<String, Object> map = Map.of(
-                "rtsp.timeout", "10s",
-                "rtsp.video-duration", "10m",
-                "rtsp.hardware-acceleration", "NVIDIA",
-                "rtsp.vaapi-device", "/dev/dri/renderD129",
-                "rtsp.cameras[0].name", "garage",
-                "rtsp.cameras[0].url", "rtsp://user:pass@192.168.0.10:8554/live",
-                "rtsp.cameras[0].host", "192.168.0.10",
-                "rtsp.cameras[0].port", "8554",
-                "rtsp.cameras[0].format", "live",
-                "rtsp.cameras[0].protocol", "UDP"
+        Map<String, Object> map = Map.ofEntries(
+                Map.entry("rtsp.timeout", "10s"),
+                Map.entry("rtsp.video-duration", "10m"),
+                Map.entry("rtsp.hardware-acceleration", "NVIDIA"),
+                Map.entry("rtsp.vaapi-device", "/dev/dri/renderD129"),
+                Map.entry("rtsp.max-retries", "5"),
+                Map.entry("rtsp.retry-wait", "10m"),
+                Map.entry("rtsp.binary-path", "/usr/local/bin/ffmpeg"),
+                Map.entry("rtsp.cameras[0].name", "garage"),
+                Map.entry("rtsp.cameras[0].url", "rtsp://user:pass@192.168.0.10:8554/live"),
+                Map.entry("rtsp.cameras[0].host", "192.168.0.10"),
+                Map.entry("rtsp.cameras[0].port", "8554"),
+                Map.entry("rtsp.cameras[0].format", "live"),
+                Map.entry("rtsp.cameras[0].protocol", "UDP")
         );
 
         binderFor(map).bind("rtsp", Bindable.ofInstance(props));
@@ -50,6 +53,9 @@ class PropertiesBindingTest {
         assertEquals("10m", props.getVideoDuration());
         assertEquals(RtspProperties.HardwareAcceleration.NVIDIA, props.getHardwareAcceleration());
         assertEquals("/dev/dri/renderD129", props.getVaapiDevice());
+        assertEquals(5, props.getMaxRetries());
+        assertEquals("10m", props.getRetryWait());
+        assertEquals("/usr/local/bin/ffmpeg", props.getBinaryPath());
 
         List<RtspProperties.Camera> cameras = props.getCameras();
         assertEquals(1, cameras.size());

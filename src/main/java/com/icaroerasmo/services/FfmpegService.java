@@ -115,7 +115,10 @@ public class FfmpegService {
         return Map.entry(camera.getName(),
                 FfmpegCommandParser.builder().
                         cameraName(camera.getName()).
+                        binaryPath(rtspProperties.getBinaryPath()).
                         hardwareAcceleration(rtspProperties.getHardwareAcceleration()).
+                        maxRetries(rtspProperties.getMaxRetries()).
+                        retryWait(rtspProperties.getRetryWait()).
                         transportProtocol(camera.getProtocol()).
                         url(propertiesUtil.cameraUrlParser(camera)).
                         doneSegmentsListSize(20).
