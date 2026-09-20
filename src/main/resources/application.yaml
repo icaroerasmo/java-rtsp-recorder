@@ -1,3 +1,6 @@
+app:
+  config-file-path: /app/config/config.yaml
+
 environment-variables:
   application:
     version: @project.version@
@@ -6,3 +9,9 @@ logging:
   level:
     org:
       springframework: OFF
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
