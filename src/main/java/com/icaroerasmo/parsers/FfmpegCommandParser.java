@@ -139,6 +139,8 @@ public class FfmpegCommandParser implements CommandParser {
                 command.add(String.valueOf(propertiesUtil.durationParser(ffmpegCommandParser.getTimeout(), TimeUnit.MICROSECONDS)));
             }
 
+            appendHardwareDecode(command);
+
             command.add("-i");
             command.add(ffmpegCommandParser.getUrl());
             command.add("-map");
@@ -181,19 +183,46 @@ public class FfmpegCommandParser implements CommandParser {
             return command;
         }
 
-        private void appendVideoEncoding(List<String> command) {
-            RtspProperties.HardwareAcceleration acceleration = ffmpegCommandParser.getHardwareAcceleration();
-
-            if (acceleration == null) {
-                acceleration = RtspProperties.HardwareAcceleration.NONE;
+        private void appendHardwareDecode(List<String> command) {
+            switch (effectiveAcceleration()) {
+                case NVIDIA -> {
+                    command.add("-hwaccel");
+                    command.add("cuda");
+                    command.add("-hwaccel_output_format");
+                    command.add("cuda");
+                }
+                case RADEON -> {
+                    command.add("-hwaccel");
+                    command.add("vaapi");
+                    command.add("-hwaccel_output_format");
+                    command.add("vaapi");
+                    command.add("-vaapi_device");
+                    command.add(ffmpegCommandParser.getVaapiDevice());
+                }
+                default -> {
+                    // Sem aceleração de decode.
+                }
             }
+        }
 
-            switch (acceleration) {
+        private void appendVideoEncoding(List<String> command) {
+            switch (effectiveAcceleration()) {
                 case NONE, COPY -> appendCopyEncoding(command);
                 case CPU -> appendCpuEncoding(command);
                 case NVIDIA -> appendNvidiaEncoding(command);
                 case RADEON -> appendVaapiEncoding(command);
             }
+        }
+
+        private RtspProperties.HardwareAcceleration effectiveAcceleration() {
+            RtspProperties.HardwareAcceleration acceleration = ffmpegCommandParser.getHardwareAcceleration();
+            if (acceleration == null) {
+                return RtspProperties.HardwareAcceleration.NONE;
+            }
+            if (acceleration == RtspProperties.HardwareAcceleration.AUTO) {
+                return RtspProperties.HardwareAcceleration.CPU;
+            }
+            return acceleration;
         }
 
         private void appendCopyEncoding(List<String> command) {
@@ -221,10 +250,6 @@ public class FfmpegCommandParser implements CommandParser {
         }
 
         private void appendVaapiEncoding(List<String> command) {
-            command.add("-vaapi_device");
-            command.add(ffmpegCommandParser.getVaapiDevice());
-            command.add("-vf");
-            command.add("format=nv12,hwupload");
             command.add("-c:v");
             command.add("h264_vaapi");
             command.add("-qp");

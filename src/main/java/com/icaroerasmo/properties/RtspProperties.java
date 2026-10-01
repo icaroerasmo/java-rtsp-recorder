@@ -37,6 +37,6 @@ public class RtspProperties implements ConfigYaml {
     }
 
     public enum HardwareAcceleration {
-        NONE, COPY, CPU, NVIDIA, RADEON
+        NONE, COPY, CPU, NVIDIA, RADEON, AUTO
     }
 }
