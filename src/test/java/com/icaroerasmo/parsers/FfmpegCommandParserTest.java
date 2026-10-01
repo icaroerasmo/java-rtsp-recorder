@@ -184,6 +184,7 @@ class FfmpegCommandParserTest {
                 .buildAsList();
 
         assertTrue(command.containsAll(List.of(
+                "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
                 "-c:v", "h264_nvenc", "-preset", "p4", "-tune", "ll",
                 "-rc", "vbr", "-cq", "28", "-b:v", "0", "-forced-idr", "1",
                 "-c:a", "copy")));
@@ -216,9 +217,26 @@ class FfmpegCommandParserTest {
                 .buildAsList();
 
         assertTrue(command.containsAll(List.of(
+                "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi",
                 "-vaapi_device", "/dev/dri/renderD128",
-                "-vf", "format=nv12,hwupload",
                 "-c:v", "h264_vaapi", "-qp", "23", "-c:a", "copy")));
+        assertTrue(command.stream().noneMatch("-vf"::equals));
+    }
+
+    @Test
+    void autoAccelerationFallsBackToCpuEncoding() {
+        List<String> command = FfmpegCommandParser.builder()
+                .url(URL)
+                .tmpPath(TMP_PATH)
+                .cameraName(CAMERA_NAME)
+                .transportProtocol(RtspProperties.TransportProtocol.TCP)
+                .hardwareAcceleration(RtspProperties.HardwareAcceleration.AUTO)
+                .buildAsList();
+
+        assertTrue(command.stream().noneMatch("-hwaccel"::equals));
+        assertTrue(command.containsAll(List.of(
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+                "-c:a", "copy")));
     }
 
     @Test

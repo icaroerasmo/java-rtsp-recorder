@@ -9,6 +9,7 @@ import com.icaroerasmo.properties.StorageProperties;
 import com.icaroerasmo.runners.FfmpegRunner;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.FfmpegUtil;
+import com.icaroerasmo.util.HardwareAccelerationDetector;
 import com.icaroerasmo.util.PropertiesUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -39,6 +40,8 @@ public class FfmpegService {
     private final FfmpegUtil ffmpegUtil;
     private final NotificationPublisher publisher;
 
+    private RtspProperties.HardwareAcceleration resolvedHardwareAcceleration;
+
     @SneakyThrows
     @PostConstruct
     public void init() {
@@ -63,6 +66,11 @@ public class FfmpegService {
         }
 
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
+
+        resolvedHardwareAcceleration = HardwareAccelerationDetector.resolve(
+                rtspProperties.getHardwareAcceleration(), rtspProperties.getVaapiDevice());
+        log.info("Hardware acceleration: {} (configured: {})",
+                resolvedHardwareAcceleration, rtspProperties.getHardwareAcceleration());
 
         // Remove stale done-segments lists left over from a previous run. The list is
         // only rewritten when a segment completes, so a stale one would make the
@@ -140,7 +148,7 @@ public class FfmpegService {
                 FfmpegCommandParser.builder().
                         cameraName(camera.getName()).
                         binaryPath(rtspProperties.getBinaryPath()).
-                        hardwareAcceleration(rtspProperties.getHardwareAcceleration()).
+                        hardwareAcceleration(resolvedHardwareAcceleration).
                         maxRetries(rtspProperties.getMaxRetries()).
                         retryWait(rtspProperties.getRetryWait()).
                         transportProtocol(camera.getProtocol()).
