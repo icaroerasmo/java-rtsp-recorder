@@ -57,7 +57,7 @@ class PropertiesDefaultsTest {
         assertEquals("0 0 0 * * *", props.getDeleteCron());
         assertEquals("0 10 0 * * *", props.getRmdirsCron());
         assertEquals("0 20 0 * * *", props.getDedupeCron());
-        assertEquals("0 */10 * * * *", props.getSyncCron());
+        assertEquals(10, props.getSyncIntervalMinutes());
         assertEquals("copy", props.getTransferMethod());
         assertNull(props.getDestinationFolder());
         assertTrue(props.getExcludePatterns().isEmpty());

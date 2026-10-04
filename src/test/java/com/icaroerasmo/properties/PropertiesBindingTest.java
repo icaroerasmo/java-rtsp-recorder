@@ -86,6 +86,7 @@ class PropertiesBindingTest {
         Map<String, Object> map = Map.of(
                 "rclone.config-location", "/tmp/rclone.conf",
                 "rclone.transfer-method", "sync",
+                "rclone.sync-interval-minutes", "20",
                 "rclone.destination-folder", "remote:records",
                 "rclone.exclude-patterns[0]", "*.tmp",
                 "rclone.exclude-patterns[1]", "*.part",
@@ -96,6 +97,7 @@ class PropertiesBindingTest {
 
         assertEquals("/tmp/rclone.conf", props.getConfigLocation());
         assertEquals("sync", props.getTransferMethod());
+        assertEquals(20, props.getSyncIntervalMinutes());
         assertEquals("remote:records", props.getDestinationFolder());
         assertEquals(List.of("*.tmp", "*.part"), props.getExcludePatterns());
         assertTrue(props.isIgnoreExisting());
@@ -111,7 +113,7 @@ class PropertiesBindingTest {
         assertEquals("move", props.getTransferMethod());
         // Unbound fields keep their defaults
         assertEquals("/app/config/rclone.conf", props.getConfigLocation());
-        assertEquals("0 */10 * * * *", props.getSyncCron());
+        assertEquals(10, props.getSyncIntervalMinutes());
         assertFalse(props.isIgnoreExisting());
         assertTrue(props.getExcludePatterns().isEmpty());
         assertNull(props.getDestinationFolder());
