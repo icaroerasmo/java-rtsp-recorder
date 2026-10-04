@@ -15,7 +15,6 @@ rclone:
   delete-cron: '0 0 1 * * *' # default value is '0 0 0 * * *' (1am)
   rmdirs-cron: '0 10 1 * * *' # default value is '0 10 0 * * *' (10 minutes past 1am)
   dedupe-cron: '0 20 1 * * *' # default value is '0 20 0 * * *' (20 minutes past 1am)
-  sync-cron: '0 */${RCLONE_SYNC_INTERVAL_MINUTES:10} * * * *' # default value is '0 */10 * * * *' (every 10 minutes)
   sync-interval-minutes: ${RCLONE_SYNC_INTERVAL_MINUTES:10} # default value is 10 minutes
   transfer-method: 'copy' # default value is 'copy'
   destination-folder: 'drive-name:/destination/folder' # mandatory
