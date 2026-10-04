@@ -16,6 +16,7 @@ public class RcloneProperties {
     private String rmdirsCron = "0 10 0 * * *";
     private String dedupeCron = "0 20 0 * * *";
     private String syncCron = "0 */10 * * * *";
+    private int syncIntervalMinutes = 10;
     private String transferMethod = "copy";
     private String destinationFolder;
     private List<String> excludePatterns = new ArrayList<>();
