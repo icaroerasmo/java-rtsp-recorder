@@ -28,15 +28,6 @@ public class ConfigController {
         Map<String, Object> merged = configService.restoreSecrets(config, current);
         configService.writeConfig(merged);
 
-        new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            System.exit(0);
-        }).start();
-
         return ResponseEntity.ok().build();
     }
 }
