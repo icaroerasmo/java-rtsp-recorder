@@ -17,7 +17,7 @@ public class RcloneSyncScheduledTask {
     private final RcloneSyncRunner rcloneSyncRunner;
     private final FutureStorage futureStorage;
 
-    @Scheduled(cron = "#{@rcloneProperties.syncCron}")
+    @Scheduled(fixedRateString = "#{@rcloneProperties.syncIntervalMinutes * 60 * 1000}")
     private void rcloneSync() {
         Future<Void> future = executorService.submit(rcloneSyncRunner::run);
         futureStorage.put("rclone", "sync", future);
