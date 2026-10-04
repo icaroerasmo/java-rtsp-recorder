@@ -28,6 +28,17 @@ public class ConfigController {
         Map<String, Object> merged = configService.restoreSecrets(config, current);
         configService.writeConfig(merged);
 
+        Thread shutdownThread = new Thread(() -> {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            Runtime.getRuntime().halt(0);
+        });
+        shutdownThread.setDaemon(true);
+        shutdownThread.start();
+
         return ResponseEntity.ok().build();
     }
 }
