@@ -4,6 +4,7 @@ import com.icaroerasmo.messaging.NotificationPublisher;
 import com.icaroerasmo.parsers.RcloneSyncCommandParser;
 import com.icaroerasmo.properties.RcloneProperties;
 import com.icaroerasmo.properties.StorageProperties;
+import com.icaroerasmo.services.SyncStateService;
 import com.icaroerasmo.storage.FutureStorage;
 import com.icaroerasmo.util.Utilities;
 import lombok.extern.log4j.Log4j2;
@@ -17,17 +18,20 @@ public class RcloneSyncRunner extends RcloneRunner {
 
     private final RcloneProperties rcloneProperties;
     private final StorageProperties storageProperties;
+    private final SyncStateService syncStateService;
 
     public RcloneSyncRunner(
             ExecutorService executorService,
             FutureStorage futureStorage,
             RcloneProperties rcloneProperties,
             StorageProperties storageProperties,
+            SyncStateService syncStateService,
             NotificationPublisher publisher,
             Utilities utilities) {
         super(executorService, futureStorage, publisher, utilities);
         this.rcloneProperties = rcloneProperties;
         this.storageProperties = storageProperties;
+        this.syncStateService = syncStateService;
     }
 
     public Void run() {
@@ -44,6 +48,8 @@ public class RcloneSyncRunner extends RcloneRunner {
         log.info("Rclone command: {}", command.build());
 
         start(command);
+
+        syncStateService.recordSync();
 
         log.info("Rclone finished.");
 
