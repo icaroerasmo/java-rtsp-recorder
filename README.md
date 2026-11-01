@@ -16,6 +16,8 @@ run `mkdir -p java-rtsp-recorder/{config,data/{tmp,records}}` before running doc
 
 The image now ships with an ffmpeg build that can run in **copy**, **CPU**, **NVIDIA**, or **Radeon/VAAPI** modes. All supported modes keep the existing segment-based file rotation.
 
+See [GPU_ACCELERATION.md](GPU_ACCELERATION.md) for the complete hardware-acceleration guide (NVIDIA and AMD, including host requirements and the VA-API caveat).
+
 ```yaml
 version: "3.9"
 services:
