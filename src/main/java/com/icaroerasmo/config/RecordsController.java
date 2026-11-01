@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -91,21 +90,18 @@ public class RecordsController {
                 .body(resource);
     }
 
-    private ResponseEntity<StreamingResponseBody> serveRemote(String filename, String drivePath) {
-        MediaType mediaType = MediaTypeFactory.getMediaType(filename)
-                .orElse(MediaType.APPLICATION_OCTET_STREAM);
-        StreamingResponseBody body = outputStream -> {
-            try {
-                recordsService.streamDriveFile(drivePath, outputStream);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Interrupted while streaming Drive file " + filename, e);
-            } catch (IOException e) {
-                throw e;
-            }
-        };
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .body(body);
+    private ResponseEntity<byte[]> serveRemote(String filename, String drivePath) {
+        try {
+            byte[] bytes = recordsService.readDriveFile(drivePath);
+            MediaType mediaType = MediaTypeFactory.getMediaType(filename)
+                    .orElse(MediaType.APPLICATION_OCTET_STREAM);
+            return ResponseEntity.ok()
+                    .contentType(mediaType)
+                    .contentLength(bytes.length)
+                    .body(bytes);
+        } catch (Exception e) {
+            log.warn("Failed to stream Drive record {}: {}", filename, e.getMessage());
+            return ResponseEntity.status(502).build();
+        }
     }
 }

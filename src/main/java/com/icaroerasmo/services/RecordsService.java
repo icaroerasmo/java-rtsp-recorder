@@ -91,11 +91,12 @@ public class RecordsService {
     }
 
     /**
-     * Streams a remote segment from Google Drive to the given output stream using
-     * {@code rclone cat}. The caller is responsible for closing the output stream.
+     * Downloads a remote segment from Google Drive into memory using
+     * {@code rclone cat}. Buffered (rather than streamed) so the controller can
+     * return it as a plain byte body — the recorder serves few concurrent streams,
+     * and segments are ~40 MB max.
      */
-    public void streamDriveFile(String drivePath, java.io.OutputStream outputStream)
-            throws IOException, InterruptedException {
+    public byte[] readDriveFile(String drivePath) throws IOException, InterruptedException {
         String remote = rcloneProperties.getDestinationFolder() + "/" + drivePath;
         List<String> command = new ArrayList<>();
         command.add("rclone");
@@ -105,14 +106,16 @@ public class RecordsService {
         command.add(rcloneProperties.getConfigLocation());
 
         Process process = new ProcessBuilder(command).start();
+        byte[] bytes;
         try (java.io.InputStream in = process.getInputStream()) {
-            in.transferTo(outputStream);
+            bytes = in.readAllBytes();
         }
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             String error = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
             throw new IOException("rclone cat exited with code " + exitCode + ": " + error);
         }
+        return bytes;
     }
 
     private List<VideoRecord> listLocal() {
