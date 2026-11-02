@@ -62,6 +62,18 @@ public class RecordsController {
         return serveRemote(filename, drivePath);
     }
 
+    @GetMapping("/{filename}/thumbnail")
+    public ResponseEntity<byte[]> thumbnail(@PathVariable String filename) {
+        byte[] thumb = recordsService.getThumbnail(filename);
+        if (thumb == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .body(thumb);
+    }
+
     private ResponseEntity<?> serveLocal(Path path, String rangeHeader) throws IOException {
         Resource resource = new FileSystemResource(path);
         MediaType mediaType = MediaTypeFactory.getMediaType(resource)

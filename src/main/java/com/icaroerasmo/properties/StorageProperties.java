@@ -12,6 +12,7 @@ public class StorageProperties implements ConfigYaml {
     private String deleteOldFilesCron = "0 30 0 * * *";
     private String tmpFolder = "/app/data/tmp";
     private String recordsFolder = "/app/data/records";
+    private String thumbnailFolder = "/app/data/thumbs";
     private String maxRecordsFolderSize = "10G";
     private String maxAgeRemoteVideoFiles = "20d";
 }
