@@ -118,6 +118,53 @@ public class RecordsService {
         return bytes;
     }
 
+    /**
+     * Returns a small JPEG thumbnail (320px wide) of the first video frame,
+     * generated on demand with ffmpeg and cached under
+     * {@code storage.thumbnail-folder}. Returns {@code null} when the file can't
+     * be resolved or the frame can't be extracted.
+     */
+    public byte[] getThumbnail(String filename) {
+        Path thumb = Paths.get(storageProperties.getThumbnailFolder(), filename + ".jpg");
+        if (Files.exists(thumb)) {
+            try {
+                return Files.readAllBytes(thumb);
+            } catch (IOException e) {
+                log.warn("Failed to read cached thumbnail {}: {}", thumb, e.getMessage());
+                return null;
+            }
+        }
+        try {
+            Files.createDirectories(thumb.getParent());
+            if (generateThumbnail(filename, thumb) && Files.exists(thumb)) {
+                return Files.readAllBytes(thumb);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to generate thumbnail for {}: {}", filename, e.getMessage());
+        }
+        return null;
+    }
+
+    private boolean generateThumbnail(String filename, Path thumb) throws IOException, InterruptedException {
+        Optional<Path> local = resolveLocalPath(filename);
+        String command;
+        if (local.isPresent()) {
+            command = "ffmpeg -y -loglevel error -i '" + local.get()
+                    + "' -frames:v 1 -vf scale=320:-1 '" + thumb + "' 2>/dev/null";
+        } else {
+            String drivePath = resolveDrivePath(filename);
+            if (drivePath == null) {
+                return false;
+            }
+            String remote = rcloneProperties.getDestinationFolder() + "/" + drivePath;
+            command = "rclone cat '" + remote + "' --config '" + rcloneProperties.getConfigLocation()
+                    + "' 2>/dev/null | ffmpeg -y -loglevel error -i pipe:0 -frames:v 1 -vf scale=320:-1 '"
+                    + thumb + "' 2>/dev/null";
+        }
+        Process process = new ProcessBuilder("sh", "-c", command).start();
+        return process.waitFor() == 0;
+    }
+
     private List<VideoRecord> listLocal() {
         List<VideoRecord> result = new ArrayList<>();
         Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
