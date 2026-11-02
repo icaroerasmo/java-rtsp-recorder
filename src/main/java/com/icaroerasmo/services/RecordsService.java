@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -44,6 +46,11 @@ public class RecordsService {
     private final RcloneProperties rcloneProperties;
     private final StorageProperties storageProperties;
     private final ObjectMapper objectMapper;
+
+    /** Caps concurrent thumbnail generation so a burst of requests can't exhaust the process/thread limits. */
+    private final Semaphore thumbnailSemaphore = new Semaphore(4);
+
+    private static final int THUMBNAIL_TIMEOUT_SECONDS = 30;
 
     public List<VideoRecord> listAll() {
         Map<String, VideoRecord> byFilename = new LinkedHashMap<>();
@@ -134,15 +141,31 @@ public class RecordsService {
                 return null;
             }
         }
+
+        boolean acquired = false;
         try {
+            acquired = thumbnailSemaphore.tryAcquire(10, TimeUnit.SECONDS);
+            if (!acquired) {
+                log.debug("Thumbnail generation saturated, skipping {}", filename);
+                return null;
+            }
             Files.createDirectories(thumb.getParent());
             if (generateThumbnail(filename, thumb) && Files.exists(thumb)) {
                 return Files.readAllBytes(thumb);
             }
+            return null;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while generating thumbnail for {}", filename);
+            return null;
         } catch (Exception e) {
             log.warn("Failed to generate thumbnail for {}: {}", filename, e.getMessage());
+            return null;
+        } finally {
+            if (acquired) {
+                thumbnailSemaphore.release();
+            }
         }
-        return null;
     }
 
     private boolean generateThumbnail(String filename, Path thumb) throws IOException, InterruptedException {
@@ -162,7 +185,14 @@ public class RecordsService {
                     + thumb + "' 2>/dev/null";
         }
         Process process = new ProcessBuilder("sh", "-c", command).start();
-        return process.waitFor() == 0;
+        boolean finished = process.waitFor(THUMBNAIL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        if (!finished) {
+            log.warn("Thumbnail generation timed out for {}, killing process tree", filename);
+            process.descendants().forEach(ProcessHandle::destroyForcibly);
+            process.destroyForcibly();
+            return false;
+        }
+        return process.exitValue() == 0;
     }
 
     private List<VideoRecord> listLocal() {
