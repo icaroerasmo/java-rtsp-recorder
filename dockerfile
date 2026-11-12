@@ -10,7 +10,7 @@ RUN mvn clean package -DskipTests
 
 FROM archlinux:latest
 WORKDIR /app
-RUN pacman -Sy --noconfirm --needed \
+RUN pacman -Syu --noconfirm --needed \
     ffmpeg \
     jre21-openjdk-headless \
     rclone \
