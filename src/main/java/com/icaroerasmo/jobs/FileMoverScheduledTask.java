@@ -31,7 +31,9 @@ public class FileMoverScheduledTask {
         log.info("Started job to move files to records folder");
 
         final StorageProperties storageProperties = javaRtspProperties.getStorageProperties();
-        final List<RtspProperties.Camera> cameras = javaRtspProperties.getRtspProperties().getCameras();
+        final List<RtspProperties.Camera> cameras = javaRtspProperties.getRtspProperties().getCameras().stream()
+                .filter(RtspProperties.Camera::isEnabled)
+                .toList();
 
         cameras.forEach(cam -> {
             final Path tmpFolder = Paths.get(storageProperties.getTmpFolder());

@@ -95,6 +95,36 @@ class FileMoverScheduledTaskTest {
         assertTrue(fileExistsUnder(recordsFolder, camBValid));
     }
 
+    @Test
+    void disabledCameraSegmentsAreNotMoved(@TempDir Path tempDir) throws IOException {
+        Path tmpFolder = Files.createDirectories(tempDir.resolve("tmp"));
+        Path recordsFolder = Files.createDirectories(tempDir.resolve("records"));
+
+        Files.write(tmpFolder.resolve(SEGMENT_FILE), new byte[]{1});
+        Files.write(tmpFolder.resolve(".camA_done_segments"), List.of(SEGMENT_FILE));
+
+        StorageProperties storageProperties = new StorageProperties();
+        storageProperties.setTmpFolder(tmpFolder.toString());
+        storageProperties.setRecordsFolder(recordsFolder.toString());
+        storageProperties.setMaxRecordsFolderSize("10GB");
+
+        RtspProperties rtspProperties = new RtspProperties();
+        RtspProperties.Camera disabled = new RtspProperties.Camera();
+        disabled.setName("camA");
+        disabled.setEnabled(false);
+        rtspProperties.setCameras(List.of(disabled));
+
+        JavaRtspProperties javaRtspProperties =
+                new JavaRtspProperties(rtspProperties, storageProperties, new RcloneProperties());
+        FfmpegUtil ffmpegUtil = new FfmpegUtil(storageProperties, new PropertiesUtil());
+
+        new FileMoverScheduledTask(ffmpegUtil, javaRtspProperties).filesMover();
+
+        // A disabled camera must be left untouched: its segment is not moved out of tmp.
+        // (the empty records folder is cleaned up by deleteEmptyFolders, so only assert on tmp)
+        assertTrue(Files.exists(tmpFolder.resolve(SEGMENT_FILE)));
+    }
+
     private static FileMoverScheduledTask moverTask(Path tmpFolder, Path recordsFolder, String... cameraNames) {
         StorageProperties storageProperties = new StorageProperties();
         storageProperties.setTmpFolder(tmpFolder.toString());
