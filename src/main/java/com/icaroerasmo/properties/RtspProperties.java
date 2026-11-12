@@ -30,6 +30,7 @@ public class RtspProperties implements ConfigYaml {
         private String format;
         private String username;
         private String password;
+        private boolean enabled = true;
     }
 
     public enum TransportProtocol {

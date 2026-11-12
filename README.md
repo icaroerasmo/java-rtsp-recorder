@@ -137,6 +137,7 @@ rtsp:
       password: 'password'
     - name: 'backyard'
       url: 'rtsp://admin:password@192.168.0.3:554/onvif1' # if camera is configured with URL all other fields are ignored
+      enabled: true # default value is true. Set to false to skip this camera entirely (no ffmpeg, no retries)
 ```
 
 `rtsp.hardware-acceleration` controls the encoder ffmpeg uses:

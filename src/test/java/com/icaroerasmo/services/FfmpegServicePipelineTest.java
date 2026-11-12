@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -195,6 +196,30 @@ class FfmpegServicePipelineTest {
         service.start("camC");
         assertFalse(Files.exists(liveSegments));
         awaitTrue(() -> tryCall(() -> Files.exists(liveSegments)), 15000);
+    }
+
+    @Test
+    void disabledCameraNeverStartsAnFfmpegProcess() throws Exception {
+        RtspProperties.Camera disabled = camera("camDisabled");
+        disabled.setEnabled(false);
+        cameras = List.of(disabled, camera("camEnabled"));
+        rtspProperties.setCameras(cameras);
+
+        FakeFfmpeg.setMode(tmpFolder, "camDisabled", "record");
+        FakeFfmpeg.setMode(tmpFolder, "camEnabled", "record");
+
+        service.init();
+
+        // The enabled camera starts normally while the disabled one is skipped entirely.
+        awaitTrue(() -> publisher.contained("camEnabled", MessagesEnum.CAM_STARTED), 15000);
+        assertNull(futureStorage.getProcess("camDisabled"));
+        assertFalse(futureStorage.isRunning("camDisabled"));
+        assertFalse(publisher.contained("camDisabled", MessagesEnum.CAM_INITIATING));
+
+        // The health checker must not resurrect it either.
+        checker.checkIfCamsAreOnline();
+        assertNull(futureStorage.getProcess("camDisabled"));
+        assertFalse(publisher.contained("camDisabled", MessagesEnum.CAM_INITIATING));
     }
 
     private boolean allSegmentsFreshAndExist(String camName) throws IOException {

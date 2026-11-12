@@ -89,6 +89,29 @@ class CamCheckerScheduledTaskTest {
         assertTrue(recorder.started.contains("c"));
     }
 
+    @Test
+    void disabledCameraIsNeverRestarted(@TempDir Path tempDir) throws IOException {
+        RtspProperties.Camera disabled = camera("d");
+        disabled.setEnabled(false);
+
+        RtspProperties rtspProperties = new RtspProperties();
+        rtspProperties.setCameras(List.of(disabled));
+
+        StorageProperties storageProperties = new StorageProperties();
+        storageProperties.setTmpFolder(tempDir.toString());
+
+        JavaRtspProperties props =
+                new JavaRtspProperties(rtspProperties, storageProperties, new RcloneProperties());
+        // Not running at all: an enabled camera would be restarted here.
+        FfmpegServiceRecorder recorder = new FfmpegServiceRecorder();
+        CamCheckerScheduledTask task = new CamCheckerScheduledTask(
+                new NotificationPublisherStub(), props, new FutureStorage(), recorder, new PropertiesUtil());
+
+        task.checkIfCamsAreOnline();
+
+        assertTrue(recorder.started.isEmpty());
+    }
+
     private static RtspProperties.Camera camera(String name) {
         RtspProperties.Camera camera = new RtspProperties.Camera();
         camera.setName(name);

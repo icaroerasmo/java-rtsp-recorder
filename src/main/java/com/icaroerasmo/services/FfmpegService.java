@@ -72,13 +72,20 @@ public class FfmpegService {
         log.info("Hardware acceleration: {} (configured: {})",
                 resolvedHardwareAcceleration, rtspProperties.getHardwareAcceleration());
 
+        // Cameras explicitly disabled in the config are skipped entirely: no ffmpeg
+        // process is spawned for them and the health checker ignores them (see
+        // CamCheckerScheduledTask), so a broken camera costs no CPU at all.
+        final List<RtspProperties.Camera> enabledCameras = rtspProperties.getCameras().stream().
+                filter(RtspProperties.Camera::isEnabled).
+                toList();
+
         // Remove stale done-segments lists left over from a previous run. The list is
         // only rewritten when a segment completes, so a stale one would make the
         // health checker think the new processes are zombies and kill them in a loop
         // right before their first segment finishes, blocking recording forever.
-        rtspProperties.getCameras().forEach(camera -> deleteDoneSegmentsList(camera.getName()));
+        enabledCameras.forEach(camera -> deleteDoneSegmentsList(camera.getName()));
 
-        rtspProperties.getCameras().stream().
+        enabledCameras.stream().
                 map(this::parseCamInfo).
                 forEach(this::ffmpegFutureSubmitter);
 
@@ -87,6 +94,16 @@ public class FfmpegService {
 
     public void start(String camName) {
         final RtspProperties rtspProperties = javaRtspProperties.getRtspProperties();
+
+        // Defense in depth: never spawn ffmpeg for a camera that is disabled (or no
+        // longer present) in the config, even if someone calls start() directly.
+        final boolean startable = rtspProperties.getCameras().stream().
+                anyMatch(camera -> camName.equals(camera.getName()) && camera.isEnabled());
+
+        if (!startable) {
+            log.warn("Cam {}: camera is disabled or not configured, refusing to start.", camName);
+            return;
+        }
 
         // Clean up any existing state for this camera before starting a fresh one.
         // This guarantees the old ffmpeg process is killed and the old runner task

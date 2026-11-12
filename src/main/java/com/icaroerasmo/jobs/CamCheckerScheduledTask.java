@@ -36,6 +36,14 @@ public class CamCheckerScheduledTask {
         long staleThresholdMs = videoDurationMs * 3;
 
         for (RtspProperties.Camera camera : rtspProperties.getCameras()) {
+
+            // Disabled cameras are never started, so there is nothing to check (and
+            // restarting them here would keep spawning ffmpeg for a camera the operator
+            // deliberately turned off).
+            if (!camera.isEnabled()) {
+                continue;
+            }
+
             String camName = camera.getName();
             try {
                 checkCam(camName, storageProperties.getTmpFolder(), staleThresholdMs, videoDurationMs);

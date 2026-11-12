@@ -44,7 +44,8 @@ class PropertiesBindingTest {
                 Map.entry("rtsp.cameras[0].host", "192.168.0.10"),
                 Map.entry("rtsp.cameras[0].port", "8554"),
                 Map.entry("rtsp.cameras[0].format", "live"),
-                Map.entry("rtsp.cameras[0].protocol", "UDP")
+                Map.entry("rtsp.cameras[0].protocol", "UDP"),
+                Map.entry("rtsp.cameras[0].enabled", "false")
         );
 
         binderFor(map).bind("rtsp", Bindable.ofInstance(props));
@@ -63,6 +64,7 @@ class PropertiesBindingTest {
         assertEquals("garage", camera.getName());
         assertEquals("rtsp://user:pass@192.168.0.10:8554/live", camera.getUrl());
         assertEquals(RtspProperties.TransportProtocol.UDP, camera.getProtocol());
+        assertFalse(camera.isEnabled());
     }
 
     @Test

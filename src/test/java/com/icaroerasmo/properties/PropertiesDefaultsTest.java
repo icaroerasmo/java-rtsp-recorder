@@ -35,6 +35,7 @@ class PropertiesDefaultsTest {
         assertNull(camera.getFormat());
         assertNull(camera.getUsername());
         assertNull(camera.getPassword());
+        assertTrue(camera.isEnabled());
     }
 
     @Test
