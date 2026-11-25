@@ -12,6 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Month;
 import java.time.format.TextStyle;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -91,39 +92,46 @@ public class FfmpegUtil {
         }
     }
 
-    private void deleteOldestFiles(Path recordsFolder, long maxFolderSizeInBytes) {
+    private long deleteOldestFiles(Path recordsFolder, long maxFolderSizeInBytes, long currentTotalSize) {
 
         indexFileLock.lock();
 
-        List<Path> filesByLastModified;
-
-        try(Stream<Path> fileStream = Files.walk(recordsFolder)) {
-            filesByLastModified = fileStream.
-                    filter(Files::isRegularFile).
-                    filter(file -> !file.getFileName().toString().startsWith(".")).
-                    sorted(Comparator.comparingLong(this::lastModifiedMillis)).
-                    collect(Collectors.toList());
-        } catch (IOException e) {
-            log.error("Error listing records folder to delete oldest files: {}", e.getMessage());
-            indexFileLock.unlock();
-            return;
-        }
-
-        long totalSize = propertiesUtil.sizeOfFile(recordsFolder);
-
         try {
-            for(Path file : filesByLastModified) {
-                if(totalSize <= maxFolderSizeInBytes) {
-                    break;
-                }
-                long size = propertiesUtil.sizeOfFile(file);
-                if(Files.deleteIfExists(file)) {
-                    totalSize -= size;
-                    log.info("Deleted oldest file to comply with max records folder size: {}", file);
-                }
+            List<Path> filesByLastModified;
+
+            try(Stream<Path> fileStream = Files.walk(recordsFolder)) {
+                filesByLastModified = fileStream.
+                        filter(Files::isRegularFile).
+                        filter(file -> !file.getFileName().toString().startsWith(".")).
+                        sorted(Comparator.comparingLong(this::lastModifiedMillis)).
+                        collect(Collectors.toList());
+            } catch (IOException e) {
+                log.error("Error listing records folder to delete oldest files: {}", e.getMessage());
+                return currentTotalSize;
             }
-        } catch (IOException e) {
-            log.error("Error deleting oldest file: {}", e.getMessage());
+
+            long totalSize = currentTotalSize;
+
+            try {
+                for(Path file : filesByLastModified) {
+                    if(totalSize <= maxFolderSizeInBytes) {
+                        break;
+                    }
+                    long size = propertiesUtil.sizeOfFile(file);
+                    if(Files.deleteIfExists(file)) {
+                        totalSize -= size;
+                        log.info("Deleted oldest file to comply with max records folder size: {}", file);
+                    }
+                }
+            } catch (IOException e) {
+                log.error("Error deleting oldest file: {}", e.getMessage());
+            }
+
+            return totalSize;
+
+        } catch (RuntimeException e) {
+            log.error("Unexpected error deleting oldest files: {}", e.getMessage(), e);
+            return currentTotalSize;
         } finally {
             indexFileLock.unlock();
         }
@@ -145,17 +153,26 @@ public class FfmpegUtil {
         final Path recordsFolder = Paths.get(storageProperties.getRecordsFolder());
         final Path indexFile = recordsFolder.resolve(INDEX);
 
+        final long maxFolderSizeInBytes =
+                propertiesUtil.storageUnitConverter(
+                        storageProperties.getMaxRecordsFolderSize(), "B");
+
+        // The whole records tree used to be walked once PER FILE. Keep a running
+        // total for the batch instead and only re-list files when the cap is hit.
+        final AtomicLong recordsSize = new AtomicLong(propertiesUtil.sizeOfFile(recordsFolder));
+
         fileNames.parallelStream().
             map(fileName -> Map.entry(fileName, tmpFolder.resolve(fileName))).
             filter(entry -> Files.exists(entry.getValue())).
             sorted(filesNamesComparator()).
             map(filesPathMapper(recordsFolder)).
-            forEachOrdered(filesMover(recordsFolder, indexFile));
+            forEachOrdered(filesMover(recordsFolder, indexFile, maxFolderSizeInBytes, recordsSize));
 
         log.info("Done moving files to records folder");
     }
 
-    private Consumer<Map.Entry<Path, Path>> filesMover(Path recordsFolder, Path indexFile) {
+    private Consumer<Map.Entry<Path, Path>> filesMover(
+            Path recordsFolder, Path indexFile, long maxFolderSizeInBytes, AtomicLong recordsSize) {
         return (entry) -> {
 
             final Path originPath = entry.getKey();
@@ -163,13 +180,7 @@ public class FfmpegUtil {
 
             log.info("Moving file: {} to {}", entry.getKey(), entry.getValue());
 
-            long maxFolderSizeInBytes =
-                    propertiesUtil.storageUnitConverter(
-                            storageProperties.getMaxRecordsFolderSize(), "B");
-
-            long sizeOfFolder = propertiesUtil.sizeOfFile(recordsFolder);
             long sizeOfFile = propertiesUtil.sizeOfFile(originPath);
-            long probableSize = sizeOfFolder + sizeOfFile;
 
             String indexLine;
 
@@ -213,8 +224,10 @@ public class FfmpegUtil {
 
             if(success) {
                 log.info("File {} moved successfully.", entry.getKey());
-                if(probableSize > maxFolderSizeInBytes) {
-                    deleteOldestFiles(recordsFolder, maxFolderSizeInBytes);
+                recordsSize.addAndGet(sizeOfFile);
+                if(recordsSize.get() > maxFolderSizeInBytes) {
+                    recordsSize.set(deleteOldestFiles(
+                            recordsFolder, maxFolderSizeInBytes, recordsSize.get()));
                 }
             } else {
                 log.error("Error when trying to move file: {}.", entry.getKey());

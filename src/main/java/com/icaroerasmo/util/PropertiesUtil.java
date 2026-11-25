@@ -1,15 +1,16 @@
 package com.icaroerasmo.util;
 
 import com.icaroerasmo.properties.RtspProperties;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Log4j2
 @Component
 public class PropertiesUtil {
     public String cameraUrlParser(RtspProperties.Camera camera) {
@@ -106,7 +107,17 @@ public class PropertiesUtil {
 
         long sizeOfFiles = 0;
 
-        for(File newFile : Objects.requireNonNull(file.listFiles())) {
+        File[] children = file.listFiles();
+
+        if(children == null) {
+            // listFiles() returns null on I/O error, permission denial or if the
+            // directory vanished mid-walk. Never throw from here: callers hold
+            // the index lock and an exception would leak it until restart.
+            log.warn("Unable to list directory to compute size: {}", file);
+            return file.isFile() ? file.length() : 0L;
+        }
+
+        for(File newFile : children) {
             sizeOfFiles += sizeOfFile(newFile);
         }
 
