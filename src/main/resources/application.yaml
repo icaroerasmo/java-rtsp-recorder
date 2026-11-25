@@ -5,6 +5,16 @@ environment-variables:
   application:
     version: @project.version@
 
+spring:
+  task:
+    scheduling:
+      # One thread meant that a single stuck job (e.g. a lock leak or an I/O
+      # hang in the mover) silently froze the camera checker, cleanup and all
+      # rclone jobs until the process was restarted.
+      pool:
+        size: 4
+      thread-name-prefix: recorder-scheduler
+
 logging:
   level:
     org:
