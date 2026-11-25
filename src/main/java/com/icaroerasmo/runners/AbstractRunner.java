@@ -14,6 +14,8 @@ import java.util.concurrent.Future;
 @AllArgsConstructor
 public abstract class AbstractRunner {
 
+    private static final int MAX_LOG_CHARS = 256 * 1024;
+
     private final ExecutorService executorService;
 
     protected Future<StringBuilder> launchLogListener(InputStream inputStream, String runnerPrefix, String errorDescription) {
@@ -23,13 +25,13 @@ public abstract class AbstractRunner {
     protected Future<StringBuilder> launchLogListener(InputStream inputStream, String runnerPrefix, String errorDescription, boolean throwError) {
         return executorService.submit(() -> {
 
-            final StringBuilder outputLogs = new StringBuilder();
+            StringBuilder outputLogs = new StringBuilder();
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     log.info("{}: {}", runnerPrefix, line);
-                    outputLogs.append(line).append("\n");
+                    outputLogs = appendBounded(outputLogs, line);
                 }
             } catch (IOException e) {
                 if(throwError) {
@@ -40,5 +42,22 @@ public abstract class AbstractRunner {
 
             return outputLogs;
         });
+    }
+
+    private static StringBuilder appendBounded(StringBuilder logs, String line) {
+
+        String text = line.length() > MAX_LOG_CHARS
+                ? line.substring(line.length() - MAX_LOG_CHARS)
+                : line;
+
+        logs.append(text).append('\n');
+
+        if (logs.length() <= MAX_LOG_CHARS) {
+            return logs;
+        }
+
+        // A fresh builder releases the oversized backing char[]; setLength()
+        // would keep it allocated and the memory would still leak.
+        return new StringBuilder(logs.substring(logs.length() - MAX_LOG_CHARS));
     }
 }

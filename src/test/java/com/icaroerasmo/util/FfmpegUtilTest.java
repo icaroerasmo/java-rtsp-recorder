@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -117,6 +118,58 @@ class FfmpegUtilTest {
                 "Moved file must leave the tmp folder");
         assertTrue(propertiesUtil.sizeOfFile(records) <= 3072L,
                 "Records folder must comply with max records folder size after deletion");
+    }
+
+    @Test
+    void releasesIndexLockWhenSizeComputationFailsDuringCapEnforcement(@TempDir Path tempDir) throws IOException {
+        Path tmp = Files.createDirectories(tempDir.resolve("tmp"));
+        Path records = Files.createDirectories(tempDir.resolve("records"));
+
+        Path oldest = Files.write(records.resolve("old_2024-05-20_14-00-00.mkv"), new byte[2048]);
+        Files.setLastModifiedTime(oldest, FileTime.fromMillis(0L));
+
+        Files.write(tmp.resolve("cam1_2024-05-20_14-30-10.mkv"), new byte[1024]);
+
+        StorageProperties storageProperties = new StorageProperties();
+        storageProperties.setTmpFolder(tmp.toString());
+        storageProperties.setRecordsFolder(records.toString());
+        storageProperties.setMaxRecordsFolderSize("3KB");
+
+        AtomicInteger sizeCalls = new AtomicInteger();
+        PropertiesUtil failingOnce = new PropertiesUtil() {
+            @Override
+            public long sizeOfFile(Path path) {
+                // The third call happens inside deleteOldestFiles, with the
+                // index lock held (equivalent to listFiles() returning null).
+                if (sizeCalls.incrementAndGet() == 3) {
+                    throw new NullPointerException("simulated size listing failure");
+                }
+                return super.sizeOfFile(path);
+            }
+        };
+
+        FfmpegUtil failingUtil = new FfmpegUtil(storageProperties, failingOnce);
+        failingUtil.moveFilesToRecordsFolder(List.of("cam1_2024-05-20_14-30-10.mkv"));
+
+        assertFalse(failingUtil.getIndexFileLock().isLocked(),
+                "A failure while enforcing the cap must never leave the index lock held forever");
+
+        // The next mover cycle must still be able to write the index and move files.
+        String nextSegment = "cam1_2024-05-20_14-30-11.mkv";
+        Path nextPath = Files.write(tmp.resolve(nextSegment), new byte[1024]);
+        Files.setLastModifiedTime(nextPath, FileTime.fromMillis(System.currentTimeMillis() + 60_000L));
+        FfmpegUtil healthyUtil = new FfmpegUtil(storageProperties, new PropertiesUtil());
+        healthyUtil.moveFilesToRecordsFolder(List.of(nextSegment));
+
+        assertFalse(Files.exists(tmp.resolve(nextSegment)));
+        assertTrue(fileExistsUnder(records, nextSegment),
+                "Mover must keep working after a transient cap-enforcement failure");
+    }
+
+    private static boolean fileExistsUnder(Path root, String fileName) throws IOException {
+        try (var files = Files.walk(root)) {
+            return files.anyMatch(path -> path.getFileName().toString().equals(fileName));
+        }
     }
 
     private final PropertiesUtil propertiesUtil = new PropertiesUtil();

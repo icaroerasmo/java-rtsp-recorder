@@ -47,6 +47,27 @@ class AbstractRunnerTest extends AbstractRunner {
     }
 
     @Test
+    void launchLogListenerKeepsOnlyTheMostRecentLogsWhenOutputExceedsLimit() throws Exception {
+        String fillerLine = "x".repeat(1024);
+        StringBuilder input = new StringBuilder();
+        for (int i = 0; i < 300; i++) {
+            input.append(fillerLine).append('\n');
+        }
+        String lastLine = "LAST_LINE_MARKER";
+        input.append(lastLine).append('\n');
+
+        Future<StringBuilder> future = launchLogListener(
+                new ByteArrayInputStream(input.toString().getBytes()), "TestRunner", "error description");
+
+        String logs = future.get().toString();
+
+        assertTrue(logs.length() <= 256 * 1024,
+                "Retained logs must be bounded instead of growing for the lifetime of the process");
+        assertTrue(logs.endsWith(lastLine + "\n"),
+                "The newest logs must be kept when trimming");
+    }
+
+    @Test
     void launchLogListenerWithThrowErrorPropagatesRuntimeException() {
         InputStream failing = failingInputStream();
         Future<StringBuilder> future = launchLogListener(failing, "TestRunner", "error description", true);
